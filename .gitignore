@@ -1,0 +1,36 @@
+# Tệp LaTeX được tạo ra trong quá trình biên dịch
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.log
+*.lof
+*.lot
+*.nav
+*.out
+*.run.xml
+*.snm
+*.toc
+*.vrb
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.acn
+*.acr
+*.alg
+*.glg
+*.glo
+*.gls
+*.ist
+
+# Tệp PDF đầu ra (tùy chọn)
+# Nếu bạn muốn bạn bè tự biên dịch, hãy bỏ qua cả PDF.
+# Nếu bạn muốn chia sẻ PDF đã biên dịch, hãy xóa dòng này.
+*.pdf
+
+# Tệp tạm thời của các package đặc biệt (ví dụ: minted)
+_minted*
+*-blx.bib
+
+# Các tệp tạm thời của VS Code và Mac
+.DS_Store
