@@ -145,31 +145,29 @@ trong đó $r$ là \textit{rank} được xác định theo công thức:
     r = \max(2, \gamma \cdot \min(M,N)),
 \]
 với $\gamma$ là tham số \textit{rank-ratio}. Cách tiếp cận này tương đương với việc thay thế một lớp tuyến tính duy nhất bằng hai lớp tuyến tính liên tiếp: lớp thứ nhất giảm chiều xuống $r$, và lớp thứ hai ánh xạ trở lại không gian đầu ra. Hình~2 trong bài báo gốc~\cite{george2024edgeface} minh họa trực quan cơ chế này.\\
-\begin{figure}[ht]
-    \centering
- 
+% \begin{figure}[ht]
+%     \centering
+% % Trong nội dung
+%     \begin{minted}[fontsize=\footnotesize, frame=single, linenos]{python}
+% class LoRaLin(nn.Module):
+%     def __init__(self, in_feat, out_feat, gamma, bias=True):
+%         super(LoRaLin, self).__init__()
+%         rank = max(2, int(min(in_feat, out_feat) * gamma))
+%         self.lin1 = nn.Linear(in_feat, rank, bias=False)
+%         self.lin2 = nn.Linear(rank, out_feat, bias=bias)
 
-% Trong nội dung
-\begin{minted}[fontsize=\footnotesize, frame=single, linenos]{python}
-class LoRaLin(nn.Module):
-    def __init__(self, in_feat, out_feat, gamma, bias=True):
-        super(LoRaLin, self).__init__()
-        rank = max(2, int(min(in_feat, out_feat) * gamma))
-        self.lin1 = nn.Linear(in_feat, rank, bias=False)
-        self.lin2 = nn.Linear(rank, out_feat, bias=bias)
+%     def forward(self, input):
+%         x = self.lin1(input)
+%         x = self.lin2(x)
+%         return x
+%     \end{minted}
 
-    def forward(self, input):
-        x = self.lin1(input)
-        x = self.lin2(x)
-        return x
-\end{minted}
-
-    \caption{Minh họa lớp \textit{Low-Rank Linear} (LoRaLin) được cài đặt bằng PyTorch. 
-    Thay vì sử dụng một lớp fully connected duy nhất kích thước $M \times N$, LoRaLin phân rã ma trận thành hai lớp tuyến tính hạng thấp có kích thước $M \times r$ và $r \times N$, 
-    với $r$ được xác định bởi tham số \textit{Rank-ratio} ($\gamma$). 
-    Cách triển khai này cho phép giảm đáng kể số lượng tham số và phép tính (FLOPs) trong khi vẫn duy trì độ chính xác gần như không đổi.}
-    \label{fig:lora_lin}
-\end{figure}
+%     \caption{Minh họa lớp \textit{Low-Rank Linear} (LoRaLin) được cài đặt bằng PyTorch. 
+%     Thay vì sử dụng một lớp fully connected duy nhất kích thước $M \times N$, LoRaLin phân rã ma trận thành hai lớp tuyến tính hạng thấp có kích thước $M \times r$ và $r \times N$, 
+%     với $r$ được xác định bởi tham số \textit{Rank-ratio} ($\gamma$). 
+%     Cách triển khai này cho phép giảm đáng kể số lượng tham số và phép tính (FLOPs) trong khi vẫn duy trì độ chính xác gần như không đổi.}
+%     \label{fig:lora_lin}
+% \end{figure}
 
 
 
@@ -206,7 +204,7 @@ Tóm lại, \textbf{LoRaLin} là một giải pháp gọn nhẹ và hiệu quả
 \subsubsection{Chiến lược huấn luyện}
 
 EdgeFace được huấn luyện nhằm tối ưu hóa hiệu suất nhận diện khuôn mặt trong điều kiện hạn chế tài nguyên trên thiết bị biên. 
-Quy trình huấn luyện tận dụng tập dữ liệu quy mô lớn kết hợp với các chiến lược tối ưu hóa để vừa nâng cao độ chính xác, vừa duy trì tính gọn nhẹ của mô hình \cite{George2024}.
+Quy trình huấn luyện tận dụng tập dữ liệu quy mô lớn kết hợp với các chiến lược tối ưu hóa để vừa nâng cao độ chính xác, vừa duy trì tính gọn nhẹ của mô hình \cite{george2024edgeface}.
 
 \textbf{Dataset.} Mô hình được huấn luyện trên các tập con WebFace12M và WebFace4M, được trích xuất từ WebFace260M. 
 Các ảnh trong tập dữ liệu này đã được căn chỉnh khuôn mặt và chuẩn hóa độ phân giải về $112\times112$, phù hợp với tiêu chuẩn của các hệ thống nhận diện khuôn mặt.

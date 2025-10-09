@@ -1,0 +1,34 @@
+{
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/.bcf": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "**/*.aux": true,
+        "**/*.bbl": true,
+        "**/*.blg": true,
+        "**/*.log": true,
+        "**/*.out": true,
+        "**/*.toc": true,
+        "**/*.lof": true,
+        "**/*.lot": true,
+        "**/*.fls": true,
+        "**/*.fdb_latexmk": true,
+        "**/*.nav": true,
+        "**/*.snm": true,
+        "**/*.vrb": true,
+        "**/*.dvi": true,
+        "**/*.ps": true,
+        "**/*.backup": true,
+        "**/*.synctex.gz": true,
+        // Thêm mục này để ẩn tất cả các file .minted
+        "**/*.minted": true, 
+        
+        // Thêm mục này để ẩn toàn bộ thư mục cache của minted
+        "**/_minted": true 
+    }
+    }
+}
