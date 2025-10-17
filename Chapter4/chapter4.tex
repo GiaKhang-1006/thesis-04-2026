@@ -1,75 +1,25 @@
 \chapter{Thực nghiệm}
 \label{Chapter 4}
 
-Trong phần này, chúng tôi đánh giá hiệu quả của mô hình EdgeFace, một kiến trúc nhẹ được thiết kế cho truy xuất ảnh mặt người trên tập dữ liệu lớn, so với baseline OPQN sử dụng ResNet20 \cite{opqn}. Chúng tôi tập trung vào hai khía cạnh: (1) độ chính xác truy xuất, đo bằng Mean Average Precision (MAP) và Precision@Top-5 (P@5), và (2) tốc độ truy vấn, đo bằng thời gian trung bình mỗi truy vấn (ms/query). Các biến thể của EdgeFace được thử nghiệm, bao gồm: freeze backbone, unfreeze backbone, pretrain với CosFace, và pretrain với ArcFace. Thực nghiệm được tiến hành trên dataset FaceScrub, với các thiết lập seen identities để đánh giá khả năng tổng quát hóa của mô hình trên các tập dữ liệu mở rộng. Các kết quả trên unseen identities và dataset VGGFace2 sẽ được bổ sung trong tương lai theo hướng nghiên cứu của bài báo gốc \cite{opqn}.
+\section {Giới thiệu thực nghiệm}
+% Giới thiệu ngắn gọn mục đích thực nghiệm, nhấn mạnh so sánh EdgeFace (Lightweight) với baseline OPQN, tập trung vào tính tinh gọn và khả năng mở rộng. 
 
-\section{Thiết Lập Thực Nghiệm}
+% Cần có:
+% Mục tiêu: Đánh giá accuracy, MAP, P@10, speed (ms/query), params.
+% Các biến thể: Freeze, unfreeze, CosFace, ArchFace
+% Dataset: Facescrub seen (chi tiết số ảnh/danh tính), unseen/VGGface2
+% So sánh: Với OPQN, nhấn mạnh đóng góp mới
 
-\subsection{Datasets}
-Chúng tôi sử dụng dataset FaceScrub, bao gồm 530 identities với khoảng 38,722 ảnh huấn luyện và 2,550 ảnh kiểm tra. Thí nghiệm được tiến hành trong thiết lập seen identities, nơi tập huấn luyện và kiểm tra sử dụng cùng identities. Trong tương lai, chúng tôi sẽ mở rộng sang unseen identities, nơi tập kiểm tra chứa các identities không xuất hiện trong tập huấn luyện, nhằm đánh giá khả năng tổng quát hóa của mô hình, cũng như dataset VGGFace2 với quy mô lớn hơn.
+%K Kế hoạch viết: Bắt đầu bằng đoạn tổng quát, thêm lý do chọn dataset (intra-class variances cao).
 
-\subsection{Implementation Details}
-Thí nghiệm được thực hiện trên Kaggle với GPU T4x2 (16GB) và PyTorch 1.9. Mô hình EdgeFace được sử dụng làm backbone, so sánh với ResNet20 từ \cite{opqn}. Chúng tôi thử nghiệm bốn biến thể: (1) freeze conv1 và layer1 trong pretrain, (2) unfreeze toàn bộ backbone, (3) pretrain với CosFace (s=30, m=0.2), và (4) pretrain với ArcFace (s=30, m=0.5). Các tham số bao gồm: code length 48 bits (num=8, words=64), feature dimension 512, batch size 256. Pretrain sử dụng AdamW với lr=0.0001 (backbone) và lr=0.001 (metric), CosineAnnealingLR scheduler, 50 epochs. Fine-tune OrthoPQ dùng SGD (lr=0.1), margin=0.4, miu=0.1, sc=30, ReduceLROnPlateau scheduler, 300 epochs. Checkpoint pretrain CosFace được load từ \texttt{/kaggle/input/cach-5-edgeface-cosface/cach-5-edgeface-cosface.tar}.
+Trong chương này, chúng tôi trình bày các thực nghiệm nhằm đánh giá hiệu quả của mô hình EdgeFace - một kiến trúc tinh gọn được đề xuất cho nhiệm vụ truy xuất ảnh mặt người trên tập dữ liệu lớn - so với mô hình cơ sở OPQN sử dụng mạng xương sống ResNet20 \cite{opqn}. Các thực nghiệm tập trung vào hai khía cạnh chính: (i) độ chính xác truy xuất, được đo bằng chỉ số trung bình của độ chính xác trung bình (MAP) và Độ chính xác trong T kết quả hàng đầu (P@T), nhằm đánh giá khả năng trả về các kết quả liên quan một cách chính xác; và (ii) tốc độ truy vấn, được đo lường bằng thời gian trung bình mỗi truy vấn(ms/query), nhằm nhấn mạnh tính hiệu quả thực tiễn của mô hình trong môi trường dữ liệu lớn với tài nguyên hạn chế. 
 
-Số lượng tham số huấn luyện: ResNet20 có khoảng 24.6M tham số, trong khi EdgeFace chỉ có khoảng 1.8M tham số, chứng tỏ tính lightweight của EdgeFace.
+Để đạt được mục tiêu trên, chúng tôi thử nghiệm các biến thể của EdgeFace, bao gồn: Freeze Backbone (giữ cố định các lớp thấp để giảm quá khớp và tăng tốc độ huấn luyện), Unfreeze Backbone (huấn luyện toàn bộ mạng xương sống để học các đặc trưng sâu hơn), huấn luyện lại với CoseFace (xử dụng biên độ cosine để tăng khả năng phân biệt), và huấn luyện lại với ArcFace (sử dụng biên độ góc để cải thiện khả năng tổng quát hoá trên các danh tính chưa từng thấy). Các thực nghiệm hiện tại chủ yếu được thực hiện trên tập dữ liệu FaceScrub với thiết lập các danh tính đã tâhys, nơi tập huấn luyện và kiểm tra chia sẻ cùng các danh tính, nhằm đánh giá hiệu suất cơ bản của mô hình. Các kết quả trên các danh tính chưa thấy (kiểm tra trên các danh tính không có trong huấn luyện) và tập dữ liệu VGGFace2 đang được cập nhật và sẽ được bổ sung theo hướng nghiên cứu trong bài báo gốc \cite{opqn}.
 
-\subsection{Evaluation Metrics}
-Chúng tôi sử dụng ba chỉ số đánh giá: (1) Mean Average Precision (MAP) để đo độ chính xác truy xuất tổng quát, (2) Precision@Top-5 (P@5) để đo tỷ lệ ảnh đúng trong 5 kết quả đầu tiên trên FaceScrub, và (3) tốc độ truy vấn (ms/query), tính bằng tổng thời gian thực hiện hàm truy xuất chia cho số lượng ảnh kiểm tra. Các chỉ số được báo cáo cho seen identities, và sẽ mở rộng sang unseen identities.
+Phần thực nghiệm nhằm chứng minh rằng EdgeFace không chỉ tinh gọn hơn về số lượng tham số (Giảm khoảng 92\% so với ResNet20) mà còn có khả năng duy trì hoặc cải thiện hiệu xuất so với mô hình cơ sở, đặc biệt trong bối cảnh truy xuất ảnh mặt người với các biến thể ngoại lớp lớn (kiểu dáng, ánh sáng, biểu cảm) và các khoảng cách nội lớp nhỏ. Chúng tôi sẽ phân tích chi tiết từng khía cạnh, bao gồm lý do cho các kết quả bất ngờ (như MAP thấp ở một số biến thể), các đánh đổi giữa độ chính xác và tốc độ, cũng như đề xuất các hướng tối ưu hoá để khắc phục hạn chế. Các kết quả sẽ được trình bày qua bảng biểu và hình ảnh minh hoạ, với phân tích liên hệ chặt chẽ đến mục tiêu đề tài: Phát triển một kiến trúc tinh gọn phù hợp cho truy xuất ảnh mặt người trên tập dữ liệu có khả năng mở rộng.
 
-\section{Kết Quả và Thảo Luận}
+\section {Thiết lập thực nghiệm}
 
-\subsection{So Sánh Hiệu Suất Truy Xuất}
-Bảng \ref{tab:map} so sánh MAP giữa các biến thể EdgeFace và baseline OPQN (ResNet20).
+\section {Kết quả và phân tích}
 
-\begin{table}[htbp]
-\centering
-\caption{So sánh hiệu suất trên FaceScrub (seen identities)}
-\label{tab:map}
-\begin{tabular}{l|c|c|c|c}
-\hline
-Phương pháp & 16-bit MAP (\%) & 24-bit MAP (\%) & 36-bit MAP (\%) & 48-bit MAP (\%) \\
-\hline
-OPQN Original (from paper) & 90.32 & 91.54 & 92.70 & 93.85 \\
-Thực nghiệm OPQN (original backbone) & 81.77 & 90.33 & 91.92 & 93.06 \\
-EdgeFace (Freeze backbone) & 49.39 & N/A & N/A & 37.21 \\
-EdgeFace (Unfreeze backbone) & 59.43 & N/A & N/A & 0.21 \\
-EdgeFace (CosFace + OrthoPQ) & N/A & N/A & N/A & 94.44 \\
-EdgeFace (ArcFace + OrthoPQ) & N/A & N/A & N/A & N/A \\
-\hline
-\end{tabular}
-\end{table}
-
-Từ bảng, EdgeFace (CosFace + OrthoPQ) đạt MAP 94.44\% tại 48-bit, cao hơn OPQN original 0.59\%, chứng tỏ việc sử dụng backbone lightweight kết hợp pretrain CosFace cải thiện độ chính xác. Tuy nhiên, các biến thể freeze và unfreeze cho kết quả thấp hơn tại 48-bit, có thể do overfit hoặc không đủ học features tốt. Kết quả tại các bit thấp hơn cho thấy EdgeFace freeze và unfreeze cần tối ưu thêm. P@5 đang được tính toán, nhưng dự kiến tương tự MAP.
-
-\subsection{So Sánh Tốc Độ Truy Vấn}
-Hiện tại, chúng tôi chỉ có kết quả tốc độ cho EdgeFace (CosFace + OrthoPQ) tại 48-bit: 1.0155 ms/query. So với baseline OPQN (ResNet20), EdgeFace nhanh hơn nhờ kiến trúc nhẹ (ít tham số hơn 13 lần), dẫn đến thời gian truy vấn thấp hơn. Các kết quả khác đang được bổ sung, nhưng dự kiến EdgeFace sẽ vượt trội về tốc độ do tính lightweight.
-
-\subsection{Thảo Luận}
-EdgeFace (CosFace) đạt MAP cao hơn baseline tại 48-bit, nhờ angular margin tăng khả năng phân biệt feature. EdgeFace (Freeze) giảm thời gian truy vấn nhưng MAP thấp hơn, chứng minh tính tinh gọn của kiến trúc. Kết quả trên seen identities cho thấy EdgeFace có khả năng mở rộng tốt trên các tập dữ liệu lớn, phù hợp với mục tiêu của bài báo. Tuy nhiên, các biến thể unfreeze cho kết quả thấp bất ngờ tại 48-bit (0.21\%), có thể do overfit trên dataset nhỏ; cần kiểm tra thêm với regularization mạnh hơn. So với OPQN original, EdgeFace giảm đáng kể tham số (từ 24.6M xuống 1.8M), phù hợp cho large-scale retrieval.
-
-\section{Nghiên Cứu Ablation (Ablation Study)}
-Để phân tích sâu đóng góp của từng yếu tố, chúng tôi thực hiện ablation study trên FaceScrub seen identities, tập trung vào các biến thể freeze/unfreeze, pretrain CosFace/ArcFace, và so sánh với baseline.
-
-\subsection{Ablation on Freeze vs. Unfreeze Backbone}
-- Freeze: Giữ cố định conv1 và layer1, chỉ train các layer sau. Kết quả: MAP 49.39\% (16-bit), 37.21\% (48-bit). Ưu điểm: Giảm overfit, nhanh hơn; Nhược điểm: Không học features low-level tốt, dẫn đến MAP thấp.
-- Unfreeze: Train toàn bộ backbone. Kết quả: MAP 59.43\% (16-bit), 0.21\% (48-bit). Có thể overfit nghiêm trọng tại bit cao, cần điều chỉnh lr hoặc dropout.
-
-So sánh: Unfreeze tốt hơn freeze tại bit thấp, nhưng kém hơn tại bit cao. Trade-off: Freeze phù hợp cho lightweight, unfreeze cần tối ưu để tránh overfit.
-
-\subsection{Ablation on Pretrain Loss (CosFace vs. ArcFace)}
-- CosFace: Sử dụng cosine margin (m=0.2). Kết quả: MAP 94.44\% (48-bit), query time 1.0155 ms/query. Cải thiện discriminability tốt trên FaceScrub.
-- ArcFace: Angular margin (m=0.5). Kết quả: Đang thực hiện, dự kiến cao hơn nhờ angular separation tốt hơn cho unseen.
-
-So sánh: CosFace đã vượt baseline; ArcFace có thể cải thiện thêm 1-2\% MAP dựa trên bài báo gốc, nhưng tăng nhẹ query time do tính toán phức tạp.
-
-\subsection{Ablation on Code Length}
-Thử nghiệm với code length 16-48 bits: MAP tăng dần (ví dụ OPQN original: 90.32\% → 93.85\%). Với EdgeFace CosFace tại 48-bit cao nhất, cho thấy trade-off giữa tốc độ và độ chính xác: Bit ngắn hơn nhanh hơn nhưng MAP thấp.
-
-\subsection{Ablation on Backbone (EdgeFace vs. ResNet20)}
-- ResNet20: 24.6M params, MAP 93.06\% (48-bit).
-- EdgeFace: 1.8M params, MAP 94.44\% (CosFace, 48-bit). Giảm 92\% params nhưng tăng 1.38\% MAP, chứng minh lightweight architecture hiệu quả.
-
-Tổng quát: Ablation cho thấy pretrain CosFace/ArcFace là yếu tố chính cải thiện MAP, freeze/unfreeze ảnh hưởng đến generalization. Orthogonal codewords (OrthoPQ) giúp giảm redundancy, tăng scalability.
-
-\section{Kết Luận Thực Nghiệm}
-Kết quả thực nghiệm cho thấy EdgeFace (CosFace) vượt trội baseline OPQN (ResNet20) với MAP cao hơn 1.38\% trên seen identities và tốc độ truy vấn nhanh hơn nhờ kiến trúc nhẹ. Kiến trúc lightweight của EdgeFace, kết hợp với pretrain CosFace, là lựa chọn hiệu quả cho truy xuất ảnh mặt người trên các tập dữ liệu lớn. Trong tương lai, chúng tôi sẽ thử nghiệm trên dataset VGGFace2, unseen identities và code length ngắn hơn để tối ưu hóa hơn nữa, cũng như bổ sung P@5 và query time đầy đủ.
+\section {Nghiên cứu cắt bỏ}
