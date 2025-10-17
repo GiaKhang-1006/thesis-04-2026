@@ -22,7 +22,8 @@
 *.glo
 *.gls
 *.ist
-
+*.bbl
+*.bcf
 # Tệp PDF đầu ra (tùy chọn)
 # Nếu bạn muốn bạn bè tự biên dịch, hãy bỏ qua cả PDF.
 # Nếu bạn muốn chia sẻ PDF đã biên dịch, hãy xóa dòng này.
