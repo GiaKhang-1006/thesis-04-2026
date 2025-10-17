@@ -1,0 +1,181 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 3.3 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+
+\refsection{0}
+  \datalist[entry]{none/global//global/global/global}
+    \entry{omnicore2025instagram}{misc}{}{}
+      \name{author}{1}{}{%
+        {{hash=72d73c1c5fd17f38119154bc8d5bc04a}{%
+           family={{Omnicore Agency}},
+           familyi={O\bibinitperiod}}}%
+      }
+      \strng{namehash}{72d73c1c5fd17f38119154bc8d5bc04a}
+      \strng{fullhash}{72d73c1c5fd17f38119154bc8d5bc04a}
+      \strng{fullhashraw}{72d73c1c5fd17f38119154bc8d5bc04a}
+      \strng{bibnamehash}{72d73c1c5fd17f38119154bc8d5bc04a}
+      \strng{authorbibnamehash}{72d73c1c5fd17f38119154bc8d5bc04a}
+      \strng{authornamehash}{72d73c1c5fd17f38119154bc8d5bc04a}
+      \strng{authorfullhash}{72d73c1c5fd17f38119154bc8d5bc04a}
+      \strng{authorfullhashraw}{72d73c1c5fd17f38119154bc8d5bc04a}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{howpublished}{\url{https://www.omnicoreagency.com/instagram-statistics/?utm_source=chatgpt.com}}
+      \field{note}{Accessed: 2025-09-26}
+      \field{title}{Instagram Statistics}
+      \field{year}{2025}
+    \endentry
+    \entry{face-recognition-market}{misc}{}{}
+      \name{author}{1}{}{%
+        {{hash=0c3f01448aff7f96913afee9bc89f659}{%
+           family={{Precedence Research}},
+           familyi={P\bibinitperiod}}}%
+      }
+      \strng{namehash}{0c3f01448aff7f96913afee9bc89f659}
+      \strng{fullhash}{0c3f01448aff7f96913afee9bc89f659}
+      \strng{fullhashraw}{0c3f01448aff7f96913afee9bc89f659}
+      \strng{bibnamehash}{0c3f01448aff7f96913afee9bc89f659}
+      \strng{authorbibnamehash}{0c3f01448aff7f96913afee9bc89f659}
+      \strng{authornamehash}{0c3f01448aff7f96913afee9bc89f659}
+      \strng{authorfullhash}{0c3f01448aff7f96913afee9bc89f659}
+      \strng{authorfullhashraw}{0c3f01448aff7f96913afee9bc89f659}
+      \field{sortinit}{2}
+      \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{howpublished}{\url{https://www.precedenceresearch.com/facial-recognition-market}}
+      \field{note}{Accessed: 2025-09-26}
+      \field{title}{Facial Recognition Market Witnesses Strong Momentum Amid Rising Security Demands}
+      \field{year}{2025}
+    \endentry
+    \entry{cnbc2019cameras}{misc}{}{}
+      \name{author}{1}{}{%
+        {{hash=aa11677d237b2c2b435fd7decac0d7ad}{%
+           family={{CNBC}},
+           familyi={C\bibinitperiod}}}%
+      }
+      \strng{namehash}{aa11677d237b2c2b435fd7decac0d7ad}
+      \strng{fullhash}{aa11677d237b2c2b435fd7decac0d7ad}
+      \strng{fullhashraw}{aa11677d237b2c2b435fd7decac0d7ad}
+      \strng{bibnamehash}{aa11677d237b2c2b435fd7decac0d7ad}
+      \strng{authorbibnamehash}{aa11677d237b2c2b435fd7decac0d7ad}
+      \strng{authornamehash}{aa11677d237b2c2b435fd7decac0d7ad}
+      \strng{authorfullhash}{aa11677d237b2c2b435fd7decac0d7ad}
+      \strng{authorfullhashraw}{aa11677d237b2c2b435fd7decac0d7ad}
+      \field{sortinit}{3}
+      \field{sortinithash}{ad6fe7482ffbd7b9f99c9e8b5dccd3d7}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{howpublished}{\url{https://www.cnbc.com/2019/12/06/one-billion-surveillance-cameras-will-be-watching-globally-in-2021.html}}
+      \field{note}{Accessed: 2025-09-26}
+      \field{title}{One billion surveillance cameras will be watching globally in 2021}
+      \field{year}{2019}
+    \endentry
+    \entry{yang2025hiddenjoules}{misc}{}{}
+      \name{author}{2}{}{%
+        {{hash=7ccfdb0428b88b59a798215bdfdf81b1}{%
+           family={Yang},
+           familyi={Y\bibinitperiod},
+           given={Zeyu},
+           giveni={Z\bibinitperiod}}}%
+        {{hash=f029427189bf3183366391b4f590363c}{%
+           family={Armour},
+           familyi={A\bibinitperiod},
+           given={Wesley},
+           giveni={W\bibinitperiod}}}%
+      }
+      \strng{namehash}{6f6859dec330f42b26ba355466a86c98}
+      \strng{fullhash}{6f6859dec330f42b26ba355466a86c98}
+      \strng{fullhashraw}{6f6859dec330f42b26ba355466a86c98}
+      \strng{bibnamehash}{6f6859dec330f42b26ba355466a86c98}
+      \strng{authorbibnamehash}{6f6859dec330f42b26ba355466a86c98}
+      \strng{authornamehash}{6f6859dec330f42b26ba355466a86c98}
+      \strng{authorfullhash}{6f6859dec330f42b26ba355466a86c98}
+      \strng{authorfullhashraw}{6f6859dec330f42b26ba355466a86c98}
+      \field{sortinit}{4}
+      \field{sortinithash}{9381316451d1b9788675a07e972a12a7}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{howpublished}{ICML 2025 (OpenReview)}
+      \field{note}{Accessed: 2025-09-26}
+      \field{title}{The Hidden Joules: Evaluating the Energy Consumption of Vision Backbones for Progress Towards More Efficient Model Inference}
+      \field{year}{2025}
+      \verb{urlraw}
+      \verb https://openreview.net/forum?id=Va5jZARDcx
+      \endverb
+      \verb{url}
+      \verb https://openreview.net/forum?id=Va5jZARDcx
+      \endverb
+    \endentry
+    \entry{george2024edgeface}{misc}{}{}
+      \name{author}{5}{}{%
+        {{hash=5a806744e33d690213b93a9247cd5726}{%
+           family={George},
+           familyi={G\bibinitperiod},
+           given={Abhijith},
+           giveni={A\bibinitperiod}}}%
+        {{hash=f60d383c0605d7c935aa3e631bedb531}{%
+           family={Katte},
+           familyi={K\bibinitperiod},
+           given={Sanchit\bibnamedelima S.},
+           giveni={S\bibinitperiod\bibinitdelim S\bibinitperiod}}}%
+        {{hash=f9cad32ca410f96749a2da9915c31d28}{%
+           family={Moti},
+           familyi={M\bibinitperiod},
+           given={Hrishikesh\bibnamedelima S.},
+           giveni={H\bibinitperiod\bibinitdelim S\bibinitperiod}}}%
+        {{hash=b6a92d331a1e34b27df0aba72ed2dc5d}{%
+           family={Kini},
+           familyi={K\bibinitperiod},
+           given={Anush\bibnamedelima M.},
+           giveni={A\bibinitperiod\bibinitdelim M\bibinitperiod}}}%
+        {{hash=15ecd147096ee6b5c28f4acab0beac1b}{%
+           family={D},
+           familyi={D\bibinitperiod},
+           given={Sai\bibnamedelima Akhil},
+           giveni={S\bibinitperiod\bibinitdelim A\bibinitperiod}}}%
+      }
+      \strng{namehash}{b5ca494449663d4e3953871af76430d4}
+      \strng{fullhash}{448bc534779c9c726c63424d2e662a43}
+      \strng{fullhashraw}{448bc534779c9c726c63424d2e662a43}
+      \strng{bibnamehash}{448bc534779c9c726c63424d2e662a43}
+      \strng{authorbibnamehash}{448bc534779c9c726c63424d2e662a43}
+      \strng{authornamehash}{b5ca494449663d4e3953871af76430d4}
+      \strng{authorfullhash}{448bc534779c9c726c63424d2e662a43}
+      \strng{authorfullhashraw}{448bc534779c9c726c63424d2e662a43}
+      \field{sortinit}{5}
+      \field{sortinithash}{20e9b4b0b173788c5dace24730f47d8c}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{howpublished}{arXiv preprint arXiv:2307.01838}
+      \field{note}{Accessed: 2025-10-09}
+      \field{title}{EdgeFace: A Non-Iterative Method for Efficient Quantization of Face Recognition Models for the Edge}
+      \field{year}{2024}
+      \verb{urlraw}
+      \verb https://arxiv.org/abs/2307.01838
+      \endverb
+      \verb{url}
+      \verb https://arxiv.org/abs/2307.01838
+      \endverb
+    \endentry
+  \enddatalist
+\endrefsection
+\endinput
+
