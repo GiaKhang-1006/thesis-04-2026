@@ -19,6 +19,67 @@ Trong chương này, chúng tôi trình bày các thực nghiệm nhằm đánh 
 Phần thực nghiệm nhằm chứng minh rằng EdgeFace không chỉ tinh gọn hơn về số lượng tham số (Giảm khoảng 92\% so với ResNet20) mà còn có khả năng duy trì hoặc cải thiện hiệu xuất so với mô hình cơ sở, đặc biệt trong bối cảnh truy xuất ảnh mặt người với các biến thể ngoại lớp lớn (kiểu dáng, ánh   sáng, biểu cảm) và các khoảng cách nội lớp nhỏ. Chúng tôi sẽ phân tích chi tiết từng khía cạnh, bao gồm lý do cho các kết quả bất ngờ (như MAP thấp ở một số biến thể), các đánh đổi giữa độ chính xác và tốc độ, cũng như đề xuất các hướng tối ưu hoá để khắc phục hạn chế. Các kết quả sẽ được trình bày qua bảng biểu và hình ảnh minh hoạ, với phân tích liên hệ chặt chẽ đến mục tiêu đề tài: Phát triển một kiến trúc tinh gọn phù hợp cho truy xuất ảnh mặt người trên tập dữ liệu có khả năng mở rộng.
 
 \section {Thiết lập thực nghiệm}
+% Mục tiêu: Cung cấp chi tiết để tái lập, mô tả dataset chuẩn, cách xử lý. Nhấn mạnh môi trường Kaggle (lightweight phù hợp edge), thêm params count để highlight lightweight
+Phần này trình bày chi tiết về môi trường thực nghiệm, tập dữ liệc, các chi tiết triển khai và các chỉ số đánh giá được sử dụng để đảm bảo tính tái lập và minh bạch trong quá trình nghiên cứu. Thiết lập được thiết kế để tối ưu hoá hiệu quả của mô hình EdgeFace - một kiến trúc tinh gọn được đề xuất - trong nhiệm vụ truy xuất ảnh mặt người trên tập dữ liệu lớn, đồng thời so sánh với mô hình cơ sở OPQN sử dụng mạng xương sống ResNet20 \cite{opqn}. Các thông số được chọn dựa trên bài báo gốc nhưng được điều chỉnh để phù hợp với đặc điểm tinh gọn của EdgeFace, nhằm nhấn mạnh tính hiệu quả và khả năng triển khai trên các thiết bị có tài nguyên hạn chế. Đặc biệt, chúng tôi sử dụng hai phiên bản kích thước ảnh khác nhau cho tập dữ liệu FaceScrub: 32x32 pixel cho mô hình gốc (OPQN với ResNet20) để đảm bảo tính nhất quán khi so sánh kết quả trong bài báo gốc, và 112x112 pixel cho các biến thể EdgeFace để phù hơp với yêu cầu đầu vào của kiến trúc này \cite{george2024edgeface}, giúp tối ưu hoá hiệu suất huấn luyện và suy diễn.
+
+\subsection{Bộ dữ liệu}
+Chúng tôi của dụng tập dữ liệu Facescrub \cite{facescrub} làm nguồn dữ liệu chính trong giai đoạn thực nghiệm ban đầu, do đặc điểm phù hợp với nhiệm vụ truy xuất ảnh mặt người với quy mô vừa phải. Tập dữ liệu này chứa tổng cộng 106,863 ảnh mặt của 530 danh tính của các nhân vật nổi tiếng, với trung bình khoảng 200 ảnh mỗi danh tính, đảm bảo sự đa dạng về kiểu dáng, ánh sáng và biểu cảm - những yếu tố gây ra các biến thể nội lớp lớn, đồng thời tạo ra các khoảng cách ngoại lớp nhỏ giữa các cá nhân có ngoại hình tương đồng. Trong thực nghiệm, tập huấn luyện bao gồm 38,722 ảnh tương ứng với 530 dánh tính, và tập kiểm tra chứa 2,550 ảnh với cùng số lượng danh tính. Số lượng khối dữ liệu và vòng lặp lần lượt là 152 cho huấn luyện và 10 cho kiểm tra, với kích thước khối dữ liệu được đặt là 256 để cân bằng giữa hiệu suất tính toán và sử dụng bộ nhớ trên GPU.
+
+Để đảm bảo tính nhất quán và phù hợp với các mô hình khác nhau, chúng tôi áp dụng hai phiên bản kích thước ảnh cho FaceScrub:
+\begin{itemize}
+    \item \textbf{Phiên bản 32x32 pixel}: Được sử dụng cho mô hình gốc OPQN với mạng xương sống ResNet20, nhằm tái hiện và so sánh trực tiếp với kết quả trong bài báo gốc \cite{opqn}. Phiên bản này tập trung vào tính tinh gọn và hiệu quả dựa trên dữ liệu kích thước nhỏ.
+    \item \textbf{Phiên bản 112x112 pixel}: Được sụng cho các biến thể của EdgeFace, phù hợp với yêu cầu đầu vào của kiến trúc này để tận dụng tối đa các đặc trưng được học từ mô hình được huấn luyện sẵn, giúp cải thiện độ phân biệt mà không làm tăng đáng kể độ phức tạp tính toán.
+\end{itemize}
+
+Quy trình tiền xử lý dữ liệu được thực hiện một cách cẩn thận để đảm bảo chất lượng ảnh đầu vào, giảm thiểu nhiễu và tăng cường tính nhất quán. Quy trình này bao gồm các bước sau:
+
+\begin{enumerate}
+    \item \textbf{Phát hiện khuôn mặt}: Sử dụng thư viện dlib để phát hiện các khuôn mặt trong ảnh gốc. Chúng tôi chọn khuôn mặt lớn nhất (dựa trên diện tích khung bao quanh ảnh) để tập trung vào đối tượng chính, tránh các khuôn mặt phụ hoặc nhiễu nền.
+    \item \textbf{Căn chỉnh với biên}: Giữ nguyên ảnh gốc và thêm biên xung quanh khung bao quanh ảnh để mở rộng vùng khuôn mặt, tránh cắt sát cạnh gây mất thông tin. 
+    \item \textbf{Thay đổi kích thước để chống méo hình}: Chúng tôi thực hiện việc thay đổi kích thước theo hai bước, đầu tiên là phóng đại lên kích thước lớn hơn, sau đó thu nhỏ về kích thước mục tiêu. Cụ thể:
+    \begin{itemize}
+        \item Cho phiên bản 32x32: Phóng to lên 64x64 pixel, sau đó thu nhỏ xuống 32x32 pixel sử dụng phương pháp nội suy tuyến tính để giữ chi tiết mịn màng.
+        \item Cho phiên bản 112x112: Phóng to lên 224x224 pixel, sau đó thu nhỏ xuống 112x112 pixel với cùng phương pháp, giúp bảo tồn các đặc trung hình ảnh quan trọng cho EdgeFace.
+    \end{itemize}
+\end{enumerate}
+
+Thực nghiệm được tiến hành trong hai thiết lập chính:
+\begin{itemize}
+    \item \textbf{Seen identities}: Tập huấn luyện và kiểm tra sử dụng cùng các danh tính nhằm đánh giá hiệu suất cơ bản khi mô hình đã được huấn luyện trên dữ liệu quen thuộc. Thiết lập này tuân theo giao thức trong \cite {opqn}, tập trung vào các chỉ số MAP và P@K (K từ 10 đến 100, bước 10) để so sánh với các phương pháp tiên tiến.
+    \item \textbf{Unseen identities}: Tập kiểm tra chứa các danh tính không xuất hiện trong tập huấn luyện, được mô phỏng bằng cờ \texttt{--cross-dataset} trong code để phản ánh tính kịch bản thực tế nơi số lượng các danh tính mới tăng dần. Thiết lập này quan trọng để đánh giá khả năng tổng quát hoá và khả năng mở rộng của mô hình, nhưng hiện đagn dượdc cập nhât do yêu cầu tài nguyên tính toán cao hơn.
+\end {itemize}
+
+Bên cạnh đó, chúng tôi dự kiến mở rộng sang tập dữ liệu VGGFace2 trong tương lai để kiểm tra tính mở rộng trên dữ liệu quy mô lớn. Tập dữ liệ này bao gồm 3,31 triệu ảnh của 9,131 các danh tính, với phân chia chính thức: 8,631 các danh tính cho huấn luyện và 500 danh tính cho kiểm tra. Theo giao thức trong OPQN, 50 ảnh mỗi danh tính sẽ được sử dụng cho tập kiểm tra, phần còn lại cho cơ sở dữ liệu truy xuất. Các ảnh trong FaceScrub đã được xử lý trước bằng cách cắt và thay đổi kích thước về kích thước 32x32 pixel, trong khi VGGFace2 sẽ được căn chỉnh bằng MTCNN và thay đổi kích thước về 112x112 pixel để đảm bảo tính nhất quán.
+
+\subsection{Cài đặt chi tiết}
+Thực nghiệ được triển khai trên nền tảng Kaggle với hai GPU NVIDIA T4 (Mỗi GPU 16GB VRAM), hệ điều hành Linux, và framework PyTorch phiên bản 1.9 để tận dụng tính linh hoạt trong phát triển mô hình học sâu. Mô hình EdgeFace được sử dụng làm mạng sương sống thay thế cho ResNet20 trong OPQN, với mục tiêu giảm độ phức tạp tính toán và số lượng tham số trong khi vẫn duy trì hiệu suất. EdgeFace là một kiến thức gọn nhẹ được thiết kế đặc biệt cho các thiết bị biên, với tổng số tham số có thể huấn luyện khoảng 1,771,516 (~1.8 triệu), giảm đáng kể so với 24,562,496 (~24 triệu) tham số của ResNet20 - tương ứng với mức giảm 92\%, giúp tối ưu hoá hiệu suất trên các hệ thống có tài nguyên hạn chế. Việc sử dụng kích thước đầu vào 112x112 cho EdgeFace (so với 32x32 cho ResNet20) đảm bảo mô hình khai thác tối đa các đặc trung chi tiết từ ảnh, phù hợp với yêu cầu thiết kế của EdgeFace mà không làm tăng quá mức độ phức tạp.
+
+Chúng tôi thử nghiệm bốn biến thể chính của EdgeFace để khám phá các đánh đổi giữa độ chính xác và tốc độ.
+
+\begin{itemize}
+    \item \textbf{Freeze backbone}: Giữ cố định các layer conv1 và layer1 (chứa các đặc trưng cấp thấp từ quá trình tiền huấn luyện), chỉ huấn luyện các layer cao hơn. Phương pháp này nhằm giảm nguy cơ quá khớp trên tập dữ liệu nhỏ và tăng tốc độ huấn luyện bằng cách hạn chế số lượng tham số được cập nhật.
+    \item \textbf{Unfree backbone}: Huấn luyện toàn bộ mạng xương sống từ đầu hoặc tinh chỉnh để tận dung khả năg học các đặc trưng sâu hơn. Phương pháp này có tiềm năng cải thiện độ phân biệt nhưng đễ dẫn đến hiện tượng quá khớp nếu không có đủ dữ liệu hoặc chuẩn hoá không đủ.
+    \item \textbf{Khởi tạo trọng số, tiền huấn luyện với CosFace}: Chúng tôi khởi tạo các trọng số của mạng xương sống EdgeFace băgnf cách tiền huấn luyện với hàm mất mát CosFace (tham số co giãn $s = 30$, biên độ $m = 0.2$). Kỹ thuật này được sử dụng để tối đa hoá độ chặt chẽ nội lớp và khoảng cách ngoại lớp trong không gian đặc trưng nhúng, cung cấp một nền tảng vức chắc cho quá trình huấn luyện lượng tử hoá tiếp theo.
+    \item \textbf{Khởi tạo trọng số, tiền huấn luyện với ArcFace}: Chúng tôi khởi tạo các trọng số của mạng xương sống EdgeFace (tham số co giãn $s = 30$, biên độ $m = 0.5$). Kỹ thuật này sử dụng biên độ góc để tăng cường sự phân tách góc giữa các danh tính trong không gian đặc trưng nhúng, tạo ra các đặc trung phân biệt mạnh mẽ hơn. Điều này đặc biệt hữu ích khi mục tiêu là đạt hiệu suất tốt trên các danh tính chưa thấy hoặc trong các kịch bản đánh giá chéo tập dữ liệu. Biến thể này đang được cập nhật.
+\end{itemize}
+
+Các tham số chung cho tất cả các biến thể bao gồm: độ dài mã hoá được khảo sát trong khoảng rộng từ 16 đến 48 bit (với các cấu hình cụ thể là 16, 24, 36, 48 bit). Cụ thể, cấu hình 48 bit được đạt được với số lượng bộ mã $num=8$ và số lượng từ mã mỗi bộ mã $words=64$ (do $8 \times \log_2(64) = 48$). Chiều đặc trưng nhúng đầu ra được đặt là 512 để cân bằng giữa khả năng biểu diễn và hiệu quả sử dụng bộ nhớ. Kích thước khối dữ liệu được thiết lập là 256 để phù hợp với giới hạn VRAM của GPU T4x2 mà không gây lỗi hết bộ nhớ (OOM). Quy trình huấn luyện được chia thành hai giai đoạn:
+\begin{itemize}
+    \item \textbf{Giai đoạn tiền huấn luyện}: Sử dụng thuật toán tối ưu hoá AdamW với hai mức độ học tập khác nhau: 0.0001 cho phần mạng xương sống và 0.001 cho phần đầu metric. Chúng tôi áp dụng bộ điều chỉnh tốc độ học CosineAnnealingLR để điều chỉnh tốc độ học một cách mượt mà theo hàm cosine, cho phép mô hình giảm tốc độ học dần về 0 khi kết thúc quá trình huấn luyện. Quá trình này được chạy trong 50 vòng lặp. Các kỹ thuật tăng cường dữ liệu được áp dụng để tăng cường khả năng tổng quát hoá trước các biến thiên trong dữ liệu bao gồm: Cắt ảnh ngẫu nhiên và lật ảnh ngẫu nhiên. 
+    \item \textbf{Giai đoạn tinh chỉnh OrthoPQ}: Chúng tôi sử dụng thuật toán tối ưu hoá SGD (Stochastic Gradient Descent) với tốc độ học tập ban đầu là 0.1. Các siêu tham số chính được thiết lập dữ trên nghiên cứu OPQN gốc, bao gồm: Biên độ $m = 0.4$, trọng số dư thừa $miu = 0.1$, hệ số co giãn $sc = 30$. Chúng tôi cũng áp dụng bộ điều chỉnh tốc độ học ReduceLROnPlateau để điều chỉnh tốc độ học dựa trên giá trị hàm mất mát trên tập huấn luyện, giảm tốc độ học khi mô hình không có sự cải thiện. Giai đoạn này được chạy trong 300 vòng lặp để tối ưu hoá hiệu suất lượng tử hoá và hiệu suất truy vấn. 
+\end{itemize}
+
+Toàn bộ mã nguồn được phát triển dựa trên quá trình triển khai OPQN nhưng được điều chỉnh để tích hợp mạng xương sống EdgeFace và được xử lý các phiên bản kích thước ảnh khác nhau. Thời gian huấn luyện trung bình dao động từ 5 đến 10 giờ cho mỗi biến thể trên Kaggle, tuỳ thuộc vào độ dài mã hoá. 
+
+\subsection{Evaluation Metric}
+Để đánh giá hiệu quả toàn diện của mô hình, chúng tôi sử dụng ba chỉ số chính, phù hợp với các nghiên cứu trong lĩnh vực truy xuất ảnh mặt người:
+\begin{itemize}
+    \item \textbf{Độ chính xác trung bình - MAP}: MAP là chỉ số đo lường độ chính xác trung bình trên toàn bộ các truy vấn, được tính dựa trên đường cong Precision-Recall. Chỉ số này phản ánh khả năng trả về các mục tiêu liên quan (cùng danh tính) ở các vị trí cao (top ranks) và là một thước đo quan trọng cho hiệu suất truy xuất ở quy mô lớn.
+    \item \textbf{Độ chính xác tại Top-K - P@K}: P@K thể hiện tỷ lệ ảnh đúng (cùng danh tính) trong $K$ kết quả đầu tiên được trả về, với K được khảo sát trong phạm vi từ 10 đến 100 với bước nhảy 10, theo giao thức trong bài báo gốc. Chỉ số này phản ánh hiệu suất thực tế của hệ thống đối với người dùng, vì họ thường chỉ xem xét các kết quả hàng đầu.
+    \item \textbf{Tốc độ truy vấn - ms/query}: Chỉ số này là thời gian trung bình cần thiết để thực hiện mỗi truy vấn. Nó được tính bằng tổng thời gian thực thi hàm tính khoảng cách bất đối xứng trong OPQN (PqDisRet\_Ortho) chia cho tổng số lượng ảnh kiểm tra (khoảng 2,550 ảnh trong FaceScrub). Việc báo cáo tốc độ truy vấn là một đóng góp mới của nghiên cứu nhằm nhấn mạnh tính hiệu quả của mô hình trên các thiết bị nhẹ, do bài báo gốc không công bố chỉ số này.
+\end{itemize}
+
+Các chỉ số được báo cáo riêng biệt cho các danh tính được thấy và chưa thấy (unseen và P@K đang được cập nhật). Ngoài ra chúng tôi đo lường số lượng tham số có thể huấn luyện để đinh lượng mức độ tinh gọn của kiến trúc. Nếu cần thiết, các phân tích thống kê như kiểm định t-test sẽ được xem xét để xác định mức độ ý nghĩa thống kê của các cải thiện trong MAP, nhưng hiện tại, chúng tôi ưu tiên phân tích mô tả để làm rõ các xu hướng chính.
 
 \section {Kết quả và phân tích}
 
