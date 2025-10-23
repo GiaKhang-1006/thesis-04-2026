@@ -71,7 +71,7 @@ Các tham số chung cho tất cả các biến thể bao gồm: độ dài mã 
 
 Toàn bộ mã nguồn được phát triển dựa trên quá trình triển khai OPQN nhưng được điều chỉnh để tích hợp mạng xương sống EdgeFace và được xử lý các phiên bản kích thước ảnh khác nhau. Thời gian huấn luyện trung bình dao động từ 5 đến 10 giờ cho mỗi biến thể trên Kaggle, tuỳ thuộc vào độ dài mã hoá. 
 
-\subsection{Evaluation Metric}
+\subsection{Chỉ số đánh giá}
 Để đánh giá hiệu quả toàn diện của mô hình, chúng tôi sử dụng ba chỉ số chính, phù hợp với các nghiên cứu trong lĩnh vực truy xuất ảnh mặt người:
 \begin{itemize}
     \item \textbf{Độ chính xác trung bình - MAP}: MAP là chỉ số đo lường độ chính xác trung bình trên toàn bộ các truy vấn, được tính dựa trên đường cong Precision-Recall. Chỉ số này phản ánh khả năng trả về các mục tiêu liên quan (cùng danh tính) ở các vị trí cao (top ranks) và là một thước đo quan trọng cho hiệu suất truy xuất ở quy mô lớn.
