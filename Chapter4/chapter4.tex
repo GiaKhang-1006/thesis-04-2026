@@ -82,5 +82,48 @@ Toàn bộ mã nguồn được phát triển dựa trên quá trình triển kh
 Các chỉ số được báo cáo riêng biệt cho các danh tính được thấy và chưa thấy (unseen và P@K đang được cập nhật). Ngoài ra chúng tôi đo lường số lượng tham số có thể huấn luyện để đinh lượng mức độ tinh gọn của kiến trúc. Nếu cần thiết, các phân tích thống kê như kiểm định t-test sẽ được xem xét để xác định mức độ ý nghĩa thống kê của các cải thiện trong MAP, nhưng hiện tại, chúng tôi ưu tiên phân tích mô tả để làm rõ các xu hướng chính.
 
 \section {Kết quả và phân tích}
+Phần này trình bày chi tiết các kết quả định lợng thu được từ thực nghiệm, bao gồm hiệu suất truy xuất và tốc độ truy vấn của mô hình EdgeFace so với mô hình cơ sở OPQN sử dụng mạng xương sống ResNet20. Chúng tôi sử dụng các bảng biễu diễn để minh hoạ số liệu một cách rõ ràng, kèm theo phân tích sâu về ý nghĩa của các kết quả, lý do dẫn đến sự khác biệt giữa các biến thể, các yếu tố ảnh hưởng đến hiệu suất (như quá khớp hoặc chưa khớp), và các đánh đổi giữa độ chính xác, tốc độ và tính tinh gọn của kiến trúc. Mục tiêu chính là chứng minh rằng EdgeFace, với thiết kế gọn nhẹ, không chỉ giảm đáng kể số lượng tham số (từ 24.6 triệu xuống còn 1.8 triệu, giảm 92\%) mà còn có khả năng cải thiện hoặc duy trì hiệu suất so với mô hình cơ sở, đồng thời nhấn mạnh khả năng mở rộng trên tập dữ liệu FaceScrub với thiết lập các danh tính đã biết. Các kết quả trên các danh tính chưa biết và VGGFace2 đang được cập nhật để mở rộng phân tích về khả năng tổng quát hoá. Ngoài ra, chúng tôi cũng đề cập đến các chỉ số P@K (K từ 10 đến 100, bước 10) đang được tính toán để đánh giá hiệu suất tại các mức truy xuất đầu tiên (top ranks) - vốn là yếu tố quan trọng trong các ứng dụng thực thế nơi người dùng thường chỉ quan tâm đến các kết quả đầu tiên. 
+
+Để đảm bảo tính khách quan, tất cả các kết quả đều được thu thập từ các lần chạy độc lập trên nền tảng Kaggle, với việc ghi log chi tiết về hàm mất mát trong huấn luyện và kiểm định để theo dõi quá trình hội tụ. Phân tích được đối chiếu với các khái niệm lý thuyết từ bài báo gốc \cite{opqn}, chẳng hạn như vai trò của từ mã trực giao trong việc giảm trùng lặp thông tin và cải thiện chất lượng lượng tử hoá, cùng với các hàm mất mát có biên góc giúp tăng khả năng phân biệt của mô hình.
+
+\subsection {So sánh hiệu suất truy xuất}
+
+\begin{table}[htbp]
+\centering
+\caption{So sánh MAP (\%) trên FaceScrub (seen identities)}
+\label{tab:map}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{l|c|c|c|c}
+\hline
+Phương pháp              & 16-bit & 24-bit & 36-bit & 48-bit \\ % Đã sửa
+\hline
+OPQN Original (from paper) \cite{opqn} & 90.32 & 91.54 & 92.70 & 93.85 \\
+Thực nghiệm OPQN (original backbone) & 82.18 & 90.33 & 91.92 & 93.06 \\
+EdgeFace (Freeze backbone)      & 49.39 & 0.21 & 40.32 & 37.21 \\
+EdgeFace (Unfreeze backbone)    & 59.43 & 0.21 & 55.29 & 0.21 \\
+EdgeFace (CosFace + OrthoPQ)    & 84.16 & 89.23 & 93.06 & 94.44 \\
+EdgeFace (ArcFace + OrthoPQ)    & Đang cập nhật & Đang cập nhật & Đang cập nhật & Đang cập nhật \\
+\hline
+\end{tabular}}
+\end{table}
+
+Bảng \ref{tab:map} trình bày so sánh chỉ số độ chính xác trung bình (MAP) trên tập FaceScrub với các độ dài mã hoá từ 16 đến 48 bit. Các mô hình so sánh gồm OPQN gốc từ bài báo, OPQN tái hiện với cùng mạng xương sống ResNet20 và các biến thể khác nhau của EdgeFace. Kết quả được làm tròn đến hai chữ số thập phân; các giá trị bất thường (như MAP gần 0\%) sẽ được phân tích nguyên nhân chi tiết trong phần thảo luận.
+
+Từ bảng \ref{tab:map}, có thê thấy EdgeFace (CosFace + OrthoPQ) đạt hiệu suất cao nhất tại độ dài 48 bit, với MAP = 94.44\%, cao hơn mô hình OPQN gốc 0.59\% và cao hơn bản tái hiện 1.38\%. Điều này cho thấy việc kết hợp mạng trích xuất đặc trưng EdgeFace nhẹ với hàm mất mát CosFace đã tăng đáng kể khả năng phân biệt đặc trưng trong không gian lượng tử hoá. 
+
+Cự thể, biên góc cosine (m = 0.2) giúp giảm độ biến thiên trong lớp bằng cách khiến các đặc trung của cùng một danh tính hội tụ gần nhau hơn trê mặt cầu đơn vị, đồng thời tăng khoảng cách giữa các lớp - hoàn toàn phù hợp với phân tích trong CosFace. Việc sử dụng ảnh đầu vào kích thước 112x112 thay vì (32x32 của ResNet20) cũng giúp mô hình học được nhiều chi tiết hơn, làm tăng thông tin lượng tử hoá.  
+
+Ngược lại, các biến thể EdgeFace (Freeze backbone) và EdgeFace (Unfreeze backbone) cho kết quả thập hơn đáng kể tại 48-bit (chỉ 37.21\% cho Freeze và 0.21\% cho Unfreeze). Lý do chính cho Freeze là học chưa khớp: Việc giữ cố định conv1 và layer1 (các layer thấp chứa đặc trưng cơ bản như cạnh và các kết cấu) hạn chế khả năng thích nghi với các biến thể đặc trưng không đủ phân biệt trong không gian lượng tử hoá. Đối với Unfreeze, kết quả thấp (MAP gần 0\% tại một số điểm) gợi ý hiện tượng học quá khớp nghiêm trọng hoặc sụp đổ mô hình, vì dữ liệu huấn luyện nhỏ (~38.772 ảnh) dễ khiến đạo hàm bị bùng nổ hoặc mất mát, đặc biệt khi kết hợp với mô-đun lượng tử hoá OrthoPQ yêu cầu hội tụ ổn định. 
+
+Kiểm rta đường cong mất mát từ nhật ký huấn luyện cho thấy mất mát kiểm định tăng nhanh sau vài epoch, gợi ý thiếu các kỹ thuật chuẩn hoá như dropout hoặc giảm trọng số. Tuy nhiên, tại 16-bit, mô hình Unfreeze lại vượt qua Freeze (59.43\% so với 49.39\%), phù hợp với các nghiên cứu trước về băm và lượng tử hoá trên tập dữ liệu nhỏ hoặc hạn chết. \cite{opqn}.
+
+Các chỉ số Độ chính xác tại Top-K (Precision@K) với (K từ 10 đến 100) đang được cập nhật, dự kiến tương quan chặt chẽ với MAP. Theo ước tính ban đầu, EdgeFace (CosFace) có thể vượt mô hình cơ sở khoảng 1-2\% ở các mức đầu, nhờ biên góc giúp tăng khả năgn phân biệt.
+
+Đường cong Độ chính xác - Độ bao phủ, cũng sẽ được bổ sung để trực quan hoá hiệu suất, nơi EdgeFace (CosFace) được kỳ vọng có diện tích dưới đường cong ngoài cùng lớn nhất (AUC cao nhất), chứng tỏ hiệu suất tổng quát tốt hơn, đặc biệt trong các ứng dụng thựu tế như hệ thống nhận diện mặt người nơi độ chính xác top-5/10 là yếu tố quyết định.
+
+\subsection{So sánh tốc độ truy vấn}
+
+\subsection{Phân tích thảo luận}
+
 
 \section {Nghiên cứu cắt bỏ}
