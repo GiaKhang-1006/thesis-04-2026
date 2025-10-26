@@ -70,6 +70,9 @@ Cuối cùng, khoá luận không xem xét các yếu tố thực tế như bi�
 Kiến trúc EdgeFace kết hợp các khối CNN với các module Transformer tối ưu hóa, bao gồm Hợp tuyến tính hạng thấp (Low-Rank Linear - LoRaLin) để giảm số tham số và Chú ý chuyển vị độ sâu tách biệt (Split Depth-wise Transpose Attention - STDA) để xử lý hiệu quả đặc trưng cục bộ và toàn cục. Kết quả là một vector đặc trưng chiều $ d = 512 $, được chuẩn hóa lên siêu cầu đơn vị (unit hypersphere) để đảm bảo tính ổn định và so sánh nhất quán trong không gian đặc trưng.
 
 \subsection{Lượng tử hóa và mã hóa đặc trưng}
+Sau bước trích xuất, vector đặc trưng được đưa vào cơ chế lượng tử hoá tích chập trực chuẩn của OPQN. Quá trình này chia vector thành các không gian con và mã hoá bằng các bộ mã, dựa trên cơ sở trực chuẩn biến đổi cosine rời rạc II (DCT-II), giúp giảm lỗi lượng tử hoá. 
+
+Quá trình này chia vector $f \in R^d$ thành $m$ không gian con $f_i$, mỗi phần từ được mã hoá bằng các bộ mã $C_i = {c_{i1},..c_{ik}}$, trong đó $k = 2^b$ với $b$ là số 
 
 \section{Đóng góp}
 \section{Tổ chức khóa luận}
