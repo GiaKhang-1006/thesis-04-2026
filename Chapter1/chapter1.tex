@@ -12,30 +12,52 @@ Những ứng dụng trên cho thấy nhu cầu truy xuất ảnh mặt người
 Theo thống kê, thị trường về thị giác máy tính, nhận diện khuôn mặt được định giá khoảng 9.3 tỷ đô trong năm 2025 và kỳ vọng đạt 32.53 tỷ đô vào năm 2034 với tốc độ tăng trưởng trung bình hằng năm (CAGR) 14,93\% \cite{face-recognition-market}. Hơn 1 tỷ camera giám sát đã được triển khai trên toàn thế giới vào năm 2021 \cite{cnbc2019cameras}. Những con số này cho thấy lượng dữ liệu hình ảnh khuôn mặt cần được xử lý là vô cùng lớn, đặt ra yêu cầu cấp thiết cho các hệ thống truy xuất hiệu quả, chính xác và tiết kiệm tài nguyên.
 
 % 3. Thách thức kỹ thuật hiện tại ở quy mô lớn
-Tuy nhiên, các mô hình truy xuất hình ảnh khuôn mặt truyền thống với mạng xương sống (như VGG, Resnet, Inception) và Transformer (như ViT, BEiT) khi huán luyện trên tập dữ liệu hàng triệu đến hàng tỷ khuôn mặt đòi hỏi số phép tính dấu phẩy động (FLOP) cực lớn, thời gian tính toán lâu, tiêu hao năng lượng cao \cite{yang2025hiddenjoules}, đặc biệt khó triển khai trên các thiết bị di động và hệ thống giám sát thời gian thực. 
+Tuy nhiên, các mô hình truy xuất hình ảnh khuôn mặt truyền thống với mạng xương sống (như VGG, Resnet, Inception) và Transformer (như ViT, BEiT) khi huán luyện trên tập dữ liệu hàng triệu đến hàng tỷ khuôn mặt đòi hỏi số phép tính dấu phẩy động (FLOP) cực lớn, thời gian tính toán lâu, tiêu hao năng lượng cao \cite{yang2025hiddenjoules}, đặc biệt khó triển khai trên các thiết bị di động và hệ thống giám sát thời gian gần thực. 
 
 % 4. Lý do cần mô hình nhẹ và tính cấp thiết của nghiên cứu
 Vì vậy, chúng tôi tập trung nghiên cứu mô hình truy xuất ảnh mặt người gọn nhẹ, dùng trong dữ liệu có khả năng mở rộng, giúp giảm tải tính toán nhưng vẫn duy trì độ chính xác cao, áp dụng trên các thiết bị di động. 
 
 \section{Phát biểu bài toán}
-Có 3 dạng truy xuất ảnh mặt người đang sử dụng hiện nay. Dạng thứ nhất là truy xuất theo danh tính (Identity-based retrieval), tìm ảnh thuộc cùng một danh tính trong cơ sở dữ liệu. Dạng thứ hai là truy xuất theo độ tương đồng (Similarity-based retrieval), tìm ảnh có độ giống cao nhất với ảnh truy vấn, kết quả có thể cùng hoặc khác danh tinh. Dạng cuối cùng là truy xuất theo đặc trưng (Attribute-based retrieval), tìm ảnh dựa trên các đặc điểm khuôn mặt hoặc đặc trưng phụ như giới tính, tuổi, râu hay phụ kiện.
 
-\begin{figure}[htbp] % hoặc [htbp]
+Bài toán truy xuất ảnh khuôn mặt người trên tập dữ liệu lớn có khả năng mở rộng được phát biểu chính thức như sau:
+
+\begin{itemize}
+    \item[\textbf{Tập dữ liệu cơ sở (database):}] $ D = \{ (I_i, y_i) \}_{i=1}^N $, trong đó \( I_i \) là ảnh khuôn mặt thứ \( i \), \( y_i \) là nhãn danh tính, và \( N \) là quy mô lớn (hàng triệu đến hàng tỷ ảnh).
+    \item[\textbf{Đầu vào:}] 
+    \begin{itemize}
+        \item Ảnh truy vấn \( Q \) (một ảnh khuôn mặt cần tìm kiếm).
+        \item Tập dữ liệu \( D \) đã được tiền xử lý và lập chỉ mục.
+    \end{itemize}
+    \item[\textbf{Đầu ra:}] Tập hợp \( K \) ảnh từ \( D \) có độ tương đồng đặc trưng cao nhất với \( Q \), sắp xếp giảm dần theo khoảng cách (cosine hoặc Euclidean) trong không gian đặc trưng lượng tử hóa.
+\end{itemize}
+
+Mục tiêu: Xây dựng mô hình gọn nhẹ, tốc độ truy xuất gần thời gian thực trên thiết bị biên, với độ chính xác cao (đo bằng mAP, precision@K).
+
+\medskip
+
+Hiện nay, có 3 dạng truy xuất ảnh mặt người phổ biến:
+
+\begin{enumerate}
+    \item \textbf{Truy xuất theo danh tính (Identity-based retrieval):} Tìm ảnh thuộc cùng danh tính với truy vấn.
+    \item \textbf{Truy xuất theo độ tương đồng (Similarity-based retrieval):} Tìm \( K \) ảnh giống nhất về đặc trưng, không ràng buộc danh tính.
+    \item \textbf{Truy xuất theo đặc trưng (Attribute-based retrieval):} Tìm ảnh thỏa mãn thêm các điều kiện phụ (tuổi, giới tính, kính, râu, ...).
+\end{enumerate}
+
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=0.8\textwidth]{images/face_retrieval_types.png} 
     \caption{Các dạng truy xuất ảnh mặt người}
     \label{fig:face_retrieval_types}
 \end{figure}
 
-%\begin{itemize}
-     \textbf{Truy xuất theo độ tương đồng }
-        \begin{itemize}
-            \item \textbf{Đầu vào:} Ảnh khuôn mặt truy vấn.
-            \item \textbf{Đầu ra:} Tập hợp \( K \) hình ảnh có độ tương đồng đặc trưng cao nhất so với ảnh truy vấn, không ràng buộc về danh tính.
-        \end{itemize}
-%\end{itemize}
-Đầu vào của các dạng trên đều là ảnh khuôn mặt truy vấn, riêng truy xuất theo đặc trưng cần kèm thêm điều kiện đặc trưng phụ. Đầu ra của dạng thứ nhất: tập hợp K hình ảnh trong cơ sở dữ liệu thuộc cùng danh tính, mức độ giống cao nhất với hình ảnh truy vấn. Đầu ra của dạng thứ hai: tập K hình ảnh có độ tương đồng đặc trưng cao nhất sao với hình ảnh truy vấn, không ràng buộc về danh tính. Đầu ra của dạng thứ ba trả về K hình ảnh vừa có độ tương đồng cao, vừa thoả mãn các đặc trưng phụ đã cho.
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.6\textwidth]{images/similarity_retrieval_flow.png}
+    \caption{Quy trình truy xuất theo độ tương đồng (tập trung của khóa luận)}
+    \label{fig:similarity_flow}
+\end{figure}
 
+Khóa luận tập trung vào \textbf{dạng thứ hai – truy xuất theo độ tương đồng}, với đầu vào là ảnh khuôn mặt truy vấn và đầu ra là \( K \) ảnh có độ tương đồng đặc trưng cao nhất, không ràng buộc danh tính. Các dạng còn lại được đề cập để làm rõ bối cảnh bài toán.
 
 \section{Thách thức bài toán}
 Việc xây dựng một mô hình truy xuất ảnh mặt người vừa gọn nhẹ vừa có khả năng mở rộng trên tập dữ liệu quy mô lớn phải đối mặt với nhiều thách thức đáng kể. Các thách thức này có thể được phân loại thành ba nhóm chính: thách thức liên quan đến dữ liệu, kiến trúc mô hình xác hiệu suất hệ thống. 
@@ -53,7 +75,7 @@ Mặc dù bài toán truy xuất ảnh mặt khuôn mặt người mang tính �
 
 Thứ hai, mặc dù mô hình được thiết kế và tối ưu hoá chủ yếu dành cho các thiết bị có tài nguyên hạn chế, chẳng hạn như thiết bị di động hoặc thiét bị biên, với các ràng buộc nghiêm ngặt về công suất tính toán, bộ nhớ và năng lượng, khoá luận vẫn sử dụng nền tảng đám mây Kaggle với GPU T4x2 để thực hiện huấn luyện và đánh giá ban đầu do hạn chế về tài nguyên phần cứng thực tế. Các chỉ số hiệu suất như độ chính xác trung bình trung vị (MAP), độ chính xác hàng đầu (Top-K) và thời gian truy vấn mỗi mili giây được đo lường trên môi trường này, với thời gian truy vấn dựa trên xử lý theo lô cho toàn bộ tập kiểm tra và các lần tìm kiếm gần đúng, dẫn đến ước lượng có thể không phản ánh chính xác thời gian truy vấn đơn lẻ hoặc chi phí phụ trợ trong môi trường thực tế. Do đó, nghiên cứu không khám phá việc triển khai hoặc đánh giá trên thiết bị biên cụ thể, chấp nhận rằng các kết quả đo lường dựa trên hần cứng cao cấp có thể không đại diện đầy đủ cho hiệu suất trên thiết bị hạn chế và bỏ qua các yếu tốt như khả năng mở rộng quy mô ngang trong môi trường đám mây đầy đủ, tích hợp với các dịch vụ như Google Cloud Vision hoặc AWS Rekonition, hoặc đo lường độ trễ thực tế dưới ràng buộc năng lượng.
 
-Về mặt dữ liệu, khoá luận sử dụng các tập dữ liệu tiêu chuẩn trong lĩnh vực nhận diện khuôn mặt, chẳng hạn như VGGFace2 hoặc các tập dữ liệu tương tự với quy mô hàng triệu ảnh, để huấn luyện và đánh giá mô hình. Tuy nhiên, nghiên cứu không mở rộng đến các tập dữ liệu thực tế có quy mô hàng tỷ ảnh hoặc dữ liệu thời gian thực từ các hệ thống giám sát lớn, do hạn chế về tài nguyên tính toán và thời gian thực hiện. Điều này có nghĩa là mô hình có thể chưa được kiểm chứng đầy đủ trong các điều kiện dữ liệu thực tế đa dạng hơn về biến đổi môi trường, chẳng hạn như ảnh có độ phân giải thấp, che khuất nghiêm trọng, hoặc biến đổi do điều kiện thời tiết khắc nghiệt. Ngoài ra, tập dữ liệu chủ yếu đựa trên các nguồn công khai phương Tây, có thể dẫn đến thiên kiến văn hoá chúng tộc, hạn chế khả năng tổng quát hoá cho các quần thể đa dạng hơn, như ở Việt Nam hoặc các quốc gia Châu Á.
+Về mặt dữ liệu, khoá luận sử dụng các tập dữ liệu tiêu chuẩn trong lĩnh vực nhận diện khuôn mặt, chẳng hạn như VGGFace2 hoặc các tập dữ liệu tương tự với quy mô hàng triệu ảnh, để huấn luyện và đánh giá mô hình. Tuy nhiên, nghiên cứu không mở rộng đến các tập dữ liệu thực tế có quy mô hàng tỷ ảnh hoặc dữ liệu thời gian gần thực từ các hệ thống giám sát lớn, do hạn chế về tài nguyên tính toán và thời gian thực hiện. Điều này có nghĩa là mô hình có thể chưa được kiểm chứng đầy đủ trong các điều kiện dữ liệu thực tế đa dạng hơn về biến đổi môi trường, chẳng hạn như ảnh có độ phân giải thấp, che khuất nghiêm trọng, hoặc biến đổi do điều kiện thời tiết khắc nghiệt. Ngoài ra, tập dữ liệu chủ yếu đựa trên các nguồn công khai phương Tây, có thể dẫn đến thiên kiến văn hoá chúng tộc, hạn chế khả năng tổng quát hoá cho các quần thể đa dạng hơn, như ở Việt Nam hoặc các quốc gia Châu Á.
 
 Thứ ba, khoá luận không đề cập đến các vấn đề liên quan đến an ninh, bảo mật dữ liệu và quyên riêng tư. Cụ thể, không xem xét các quy định pháp lý như Quy định bảo vệ dữ liệu chung (GDPR) của Liên minh Châu Âu, hoặc các biện pháp bảo vệ dữ liệu cá nhân trong quá trình lưu trữ và xử lý ảnh khuôn mặt. Đồng thời, nghiên cứu bỏ qua các dạng tấn công đối kháng, chẳng hạn như việc tạo ra các ảnh đầu vào bị thay đổi tinh vi nhằm làm suy giảm hiệu suất mô hình, vốn là một thách thức lớn trong các ứng dụng thực tế như an ninh công cộng. Việc không tích hợp các kỹ thuật phòng thủ có thể làm giảm tính mạnh mẽ của mô hình trong môi trường thù địch.
 
