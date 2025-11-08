@@ -50,12 +50,12 @@ Hiện nay, có 3 dạng truy xuất ảnh mặt người phổ biến:
     \label{fig:face_retrieval_types}
 \end{figure}
 
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.6\textwidth]{images/similarity_retrieval_flow.png}
-    \caption{Quy trình truy xuất theo độ tương đồng (tập trung của khóa luận)}
-    \label{fig:similarity_flow}
-\end{figure}
+% \begin{figure}[htbp]
+%     \centering
+%     \includegraphics[width=0.6\textwidth]{images/similarity_retrieval_flow.png}
+%     \caption{Quy trình truy xuất theo độ tương đồng (tập trung của khóa luận)}
+%     \label{fig:similarity_flow}
+% \end{figure}
 
 Khóa luận tập trung vào \textbf{dạng thứ hai – truy xuất theo độ tương đồng}, với đầu vào là ảnh khuôn mặt truy vấn và đầu ra là \( K \) ảnh có độ tương đồng đặc trưng cao nhất, không ràng buộc danh tính. Các dạng còn lại được đề cập để làm rõ bối cảnh bài toán.
 
@@ -92,9 +92,49 @@ Cuối cùng, khoá luận không xem xét các yếu tố thực tế như bi�
 Kiến trúc EdgeFace kết hợp các khối CNN với các module Transformer tối ưu hóa, bao gồm Hợp tuyến tính hạng thấp (Low-Rank Linear - LoRaLin) để giảm số tham số và Chú ý chuyển vị độ sâu tách biệt (Split Depth-wise Transpose Attention - STDA) để xử lý hiệu quả đặc trưng cục bộ và toàn cục. Kết quả là một vector đặc trưng chiều $ d = 512 $, được chuẩn hóa lên siêu cầu đơn vị (unit hypersphere) để đảm bảo tính ổn định và so sánh nhất quán trong không gian đặc trưng.
 
 \subsection{Lượng tử hóa và mã hóa đặc trưng}
-Sau bước trích xuất, vector đặc trưng được đưa vào cơ chế lượng tử hoá tích chập trực chuẩn của OPQN. Quá trình này chia vector thành các không gian con và mã hoá bằng các bộ mã, dựa trên cơ sở trực chuẩn biến đổi cosine rời rạc II (DCT-II), giúp giảm lỗi lượng tử hoá. 
+Sau khi trích xuất, mỗi ảnh được biểu diễn bởi một vector đặc trưng $ x \in R^D$ (đầu ra của mạng xương sống). Theo nguyên lý lượng tử hoá tích (PQ) và OPQN, ta chia $x$ thành $M$ vector con rời nhau:
+$x = [x_1, x_2,...,x_M]$, $x_M \in R^d$, $d = D / M$
+Với mỗi không gian con $m$ ta học một bộ mã $C_m \in R^{d \times K}$ gồm $K$ từ mã (thông thường $K = 2^b$ nếu $b$ là số bit cho mỗi không gian con). Tập các bộ mã viết gộp là $C = [C_1,...,C_M] \in R^{M \times d \times K}$.
 
-Quá trình này chia vector $f \in R^d$ thành $m$ không gian con $f_i$, mỗi phần từ được mã hoá bằng các bộ mã $C_i = {c_{i1},..c_{ik}}$, trong đó $k = 2^b$ với $b$ là số 
+Hai khái niệm cần phân biệt rõ:
+\begin{itemize}
+\item \textbf{Lượng tử hoá cứng $h_{im}$:} chọn duy nhất một từ mã, chỉ số $k^*$ để xấp xỉ $x_{im}$. Cụ thể $h_{im} = C_m[:,k^*]$, \begin{align}
+    h_{im} &= \mathbf{C}_m[:,k^*], &
+    k^*   &= \arg\min_k \operatorname{dist}\bigl(x_{im},\mathbf{C}_m[:,k]\bigr).
+\end{align}
+Đây là mã nhị phân cuối cùng dùng để lưu database (mã index cho mỗi subspace).
+
+\item \textbf{Lượng tử hoá mềm $s_{im}$:}là một xấp xỉ có trọng số của các codewords (soft assignment), thường biểu diễn bằng
+
+\begin{equation}
+    s_{im}= \sum_{k=1}^{K}\alpha_{im,k}\,\mathbf{C}_m[:,k],
+\end{equation}
+
+trong đó \(\alpha_{im,k}\) là trọng số (soft probability) của codeword thứ \(k\) trong subspace \(m\).
+
+\end{itemize}
+
+\subsection{Huấn luyện đầu cuối}
+Mô hình được huấn luyện theo cơ chế đầu cuối, tối ưu đồng thời cả mạng xương sống EdgeFace và mô-đun lượng tử hoá. Chúng tôi sử dụng hàm mất mát phân loại theo không gian con kết hợp với angular margin softwax (ArcFace hoặc CosFace) để tăng khoảng cách góc giữa các lớp nhận dạng. Bên cạnh đó, regularization entropy được thêm vào nhằm đảm bảo phân bố mã lượng tử hoá cân bằng, tránh hiện tượng lệch bộ mã. 
+
+Để phù hợp với tập dữ liệu lớn như VGGFace2, quá trình huấn luyện áp dụng Partial Fully Connected (Partial FC) - chỉ cập nhật ngẫu nhiên một phần các vector trọng số của lớp phân loại ở mỗi lô, giúp giảm đáng kể bộ nhớ và tăng tốc huấn luyện mà vẫn giữ được độ chính xác. 
+
+Ngoài ra, trong quá trình thực nghiệm, chúng tôi tiến hành thử nghiệm nhiều chiến lược huấn luyện khác nhau nhằm đánh giá ảnh hưởng của qúa trình tối ưu mạng xương sống, bao gồm:
+
+\begin{itemize}
+\item \textbf{Freeze backbone:} chỉ huấn luyện phần lượng tử hoá, giữ nguyên mạng xương sống EdgeFace
+\item \textbf{Unfreeze backbone:} huấn luyện toàn bộ mô hình tích hợp đầu cuối
+\item \textbf{Pretrain backbone:} Tiền huấn luyện với CosFace hoặc ArcFace, sau đó tinh chỉnh cùng mô-đun lượng tử hoá.
+\end{itemize}
+
+Các kết quả chi tiết của từng thiết lập được trình bày trong phần thực nghiêm (Chương 4)
+
+\subsection{Tìm kiếm và truy xuất}
+Trong giai đoạn truy xuất, cơ sở dữ liệu được lượng tử hoá và lưu trữ dưới dạng mã nhị phân compact, cho phép xây dựng Look-Up Table (LUTs) để tính nhanh khoảng cách AQD giữa truy vấn và cổng vào cơ sở dữ liệu. Cơ chế này giúp giảm thời gian truy vấn xuống mức mili-giây cho mỗi ảnh, phù hợp với các ứng dựng thời gian gần thực.
+
+Việc chọn EdgeFace thay vì Resnet20 giúp hệ thống tăng độ chính xác trung bình (mAP) và giảm FLOPs 20~30\%, đồng thời rút ngắn thời gian truy vấn.
+
+Tổng thế, hướng tiếp cận này vừa đảm bảo hiệu quả tính toán, vừa giữ khả năng mở rộng và ứng dụng thực tiễn trong các hệ thống giám sát, xác thực hoặc truy xuất khuôn mặt tại Việt Nam - nơi tài nguyên thiết bị thường bị giới hạn.
 
 \section{Đóng góp}
 \section{Tổ chức khóa luận}
