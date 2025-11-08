@@ -75,14 +75,38 @@ Toàn bộ mã nguồn được phát triển dựa trên quá trình triển kh
 Để đánh giá hiệu quả toàn diện của mô hình, chúng tôi sử dụng ba chỉ số chính, phù hợp với các nghiên cứu trong lĩnh vực truy xuất ảnh mặt người:
 \begin{itemize}
     \item \textbf{Độ chính xác trung bình - MAP}: MAP là chỉ số đo lường độ chính xác trung bình trên toàn bộ các truy vấn, được tính dựa trên đường cong Precision-Recall. Chỉ số này phản ánh khả năng trả về các mục tiêu liên quan (cùng danh tính) ở các vị trí cao (top ranks) và là một thước đo quan trọng cho hiệu suất truy xuất ở quy mô lớn.
-    \item \textbf{Độ chính xác tại Top-K - P@K}: P@K thể hiện tỷ lệ ảnh đúng (cùng danh tính) trong $K$ kết quả đầu tiên được trả về, với K được khảo sát trong phạm vi từ 10 đến 100 với bước nhảy 10, theo giao thức trong bài báo gốc. Chỉ số này phản ánh hiệu suất thực tế của hệ thống đối với người dùng, vì họ thường chỉ xem xét các kết quả hàng đầu.
+    
+    Công thức tính Average Precision (AP) cho một truy vấn \(q\):
+    \[
+    AP(q) = \frac{1}{R} \sum_{k=1}^{N} P@k \cdot rel(k)
+    \]
+    Sau đó, MAP là trung bình AP trên tất cả \(Q\) truy vấn:
+    \[
+    MAP = \frac{1}{Q} \sum_{q=1}^{Q} AP(q)
+    \]
+    Trong đó, \(R\) là số ảnh liên quan (cùng danh tính với query), \(N\) là tổng số kết quả trả về, \(rel(k) = 1\) nếu ảnh tại vị trí \(k\) cùng danh tính, ngược lại là 0.
+
+    \item \textbf{Độ chính xác tại Top-K - P@K}: P@K thể hiện tỷ lệ ảnh đúng (cùng danh tính) trong \(K\) kết quả đầu tiên được trả về, với K được khảo sát trong phạm vi từ 10 đến 100 với bước nhảy 10, theo giao thức trong bài báo gốc. Chỉ số này phản ánh hiệu suất thực tế của hệ thống đối với người dùng, vì họ thường chỉ xem xét các kết quả hàng đầu.
+    
+    Công thức:
+    \[
+    P@K = \frac{\text{số lượng ảnh liên quan (cùng danh tính) trong top } K}{K}
+    \]
+    Giá trị này được tính trung bình trên tất cả truy vấn.
+
     \item \textbf{Tốc độ truy vấn - ms/query}: Chỉ số này là thời gian trung bình cần thiết để thực hiện mỗi truy vấn. Nó được tính bằng tổng thời gian thực thi hàm tính khoảng cách bất đối xứng trong OPQN (PqDisRet\_Ortho) chia cho tổng số lượng ảnh kiểm tra (khoảng 2,550 ảnh trong FaceScrub). Việc báo cáo tốc độ truy vấn là một đóng góp mới của nghiên cứu nhằm nhấn mạnh tính hiệu quả của mô hình trên các thiết bị nhẹ, do bài báo gốc không công bố chỉ số này.
+    
+    Công thức:
+    \[
+    \text{ms/query} = \frac{\text{tổng thời gian thực thi tất cả truy vấn (ms)}}{\text{tổng số truy vấn}}
+    \]
 \end{itemize}
 
-Các chỉ số được báo cáo riêng biệt cho các danh tính được thấy và chưa thấy (unseen và P@K đang được cập nhật). Ngoài ra chúng tôi đo lường số lượng tham số có thể huấn luyện để đinh lượng mức độ tinh gọn của kiến trúc. Nếu cần thiết, các phân tích thống kê như kiểm định t-test sẽ được xem xét để xác định mức độ ý nghĩa thống kê của các cải thiện trong MAP, nhưng hiện tại, chúng tôi ưu tiên phân tích mô tả để làm rõ các xu hướng chính.
+Các chỉ số được báo cáo riêng biệt cho các danh tính được thấy và chưa thấy (unseen và P@K đang được cập nhật). Ngoài ra chúng tôi đo lường số lượng tham số có thể huấn luyện để định lượng mức độ tinh gọn của kiến trúc. Nếu cần thiết, các phân tích thống kê như kiểm định t-test sẽ được xem xét để xác định mức độ ý nghĩa thống kê của các cải thiện trong MAP, nhưng hiện tại, chúng tôi ưu tiên phân tích mô tả để làm rõ các xu hướng chính.
+
 
 \section {Kết quả và phân tích}
-Phần này trình bày chi tiết các kết quả định lợng thu được từ thực nghiệm, bao gồm hiệu suất truy xuất và tốc độ truy vấn của mô hình EdgeFace so với mô hình cơ sở OPQN sử dụng mạng xương sống ResNet20. Chúng tôi sử dụng các bảng biễu diễn để minh hoạ số liệu một cách rõ ràng, kèm theo phân tích sâu về ý nghĩa của các kết quả, lý do dẫn đến sự khác biệt giữa các biến thể, các yếu tố ảnh hưởng đến hiệu suất (như quá khớp hoặc chưa khớp), và các đánh đổi giữa độ chính xác, tốc độ và tính tinh gọn của kiến trúc. Mục tiêu chính là chứng minh rằng EdgeFace, với thiết kế gọn nhẹ, không chỉ giảm đáng kể số lượng tham số (từ 24.6 triệu xuống còn 1.8 triệu, giảm 92\%) mà còn có khả năng cải thiện hoặc duy trì hiệu suất so với mô hình cơ sở, đồng thời nhấn mạnh khả năng mở rộng trên tập dữ liệu FaceScrub với thiết lập các danh tính đã biết. Các kết quả trên các danh tính chưa biết và VGGFace2 đang được cập nhật để mở rộng phân tích về khả năng tổng quát hoá. Ngoài ra, chúng tôi cũng đề cập đến các chỉ số P@K (K từ 10 đến 100, bước 10) đang được tính toán để đánh giá hiệu suất tại các mức truy xuất đầu tiên (top ranks) - vốn là yếu tố quan trọng trong các ứng dụng thực thế nơi người dùng thường chỉ quan tâm đến các kết quả đầu tiên. 
+Phần này trình bày chi tiết các kết quả định lượng thu được từ thực nghiệm, bao gồm hiệu suất truy xuất và tốc độ truy vấn của mô hình EdgeFace so với mô hình cơ sở OPQN sử dụng mạng xương sống ResNet20. Chúng tôi sử dụng các bảng biễu diễn để minh hoạ số liệu một cách rõ ràng, kèm theo phân tích sâu về ý nghĩa của các kết quả, lý do dẫn đến sự khác biệt giữa các biến thể, các yếu tố ảnh hưởng đến hiệu suất (như quá khớp hoặc chưa khớp), và các đánh đổi giữa độ chính xác, tốc độ và tính tinh gọn của kiến trúc. Mục tiêu chính là chứng minh rằng EdgeFace, với thiết kế gọn nhẹ, không chỉ giảm đáng kể số lượng tham số (từ 24.6 triệu xuống còn 1.8 triệu, giảm 92\%) mà còn có khả năng cải thiện hoặc duy trì hiệu suất so với mô hình cơ sở, đồng thời nhấn mạnh khả năng mở rộng trên tập dữ liệu FaceScrub với thiết lập các danh tính đã biết. Các kết quả trên các danh tính chưa biết và VGGFace2 đang được cập nhật để mở rộng phân tích về khả năng tổng quát hoá. Ngoài ra, chúng tôi cũng đề cập đến các chỉ số P@K (K từ 10 đến 100, bước 10) đang được tính toán để đánh giá hiệu suất tại các mức truy xuất đầu tiên (top ranks) - vốn là yếu tố quan trọng trong các ứng dụng thực thế nơi người dùng thường chỉ quan tâm đến các kết quả đầu tiên. 
 
 Để đảm bảo tính khách quan, tất cả các kết quả đều được thu thập từ các lần chạy độc lập trên nền tảng Kaggle, với việc ghi log chi tiết về hàm mất mát trong huấn luyện và kiểm định để theo dõi quá trình hội tụ. Phân tích được đối chiếu với các khái niệm lý thuyết từ bài báo gốc \cite{opqn}, chẳng hạn như vai trò của từ mã trực giao trong việc giảm trùng lặp thông tin và cải thiện chất lượng lượng tử hoá, cùng với các hàm mất mát có biên góc giúp tăng khả năng phân biệt của mô hình.
 
