@@ -1,4 +1,3 @@
-
 %\chapter{Hướng dẫn sử dụng template}
 \chapter{Công trình liên quan}
 \label{Chapter2}
@@ -409,266 +408,216 @@ Tóm lại, quy trình truy xuất dựa trên thuật toán 3 không chỉ tăn
 
 %done
 
-\section{EdgeFace: Mô hình nhận diện khuôn mặt hiệu quả cho các thiết bị biên}
-% \label{sec:edgeface-lessons}
+\section{EdgeFace: Mô hình nhận diện khuôn mặt hiệu quả cho thiết bị biên}
+\label{sec:edgeface}
 
-% Giới thiệu ngắn gọn về EdgeFace
+Trong chương này, chúng tôi trình bày cơ sở lý thuyết và kiến trúc của EdgeFace \cite{george2024edgeface}, mô hình được lựa chọn làm xương sống (backbone) cho hệ thống đề xuất. EdgeFace là sự kế thừa và tinh chỉnh từ kiến trúc EdgeNeXt \cite{maaz2022edgenext}, được thiết kế chuyên biệt để giải quyết bài toán cân bằng giữa độ chính xác nhận diện và chi phí tính toán trên các thiết bị có tài nguyên hạn chế.
 
-\subsection{Mô tả mô hình EdgeNext}
+\subsection{Kiến trúc chi tiết và Luồng dữ liệu trong EdgeNeXt}
+\label{subsec:edgenext_detail}
 
-\subsubsection{Giới thiệu về EdgeNext}
+Để thay thế hiệu quả backbone ResNet20 trong hệ thống OPQN, mô hình được chọn phải đảm bảo khả năng trích xuất đặc trưng mạnh mẽ nhưng vẫn tối ưu hóa về tài nguyên tính toán. Phần này sẽ phân tích sâu kiến trúc EdgeNeXt \cite{maaz2022edgenext}, đi sâu vào cơ chế xử lý dữ liệu qua từng giai đoạn như được minh họa trong sơ đồ kiến trúc tổng thể.
 
-EdgeNext là một mô hình mạng nơ-ron thị giác lai (hybrid) được thiết kế đặc biệt dành cho các thiết bị biên (edge devices) với mục tiêu đạt được \textbf{độ chính xác cao} trong khi \textbf{giữ số lượng tham số và chi phí tính toán ở mức tối thiểu} \cite{maaz2022edgenext}. Được giới thiệu trong bài báo ``EdgeNext: Efficiently Amalgamated CNN-Transformer Architecture for Mobile Vision Applications'' (arXiv:2206.10589), EdgeNext kết hợp ưu điểm của \textbf{mạng tích chập (CNN)} -- mạnh về trích xuất đặc trưng cục bộ -- và \textbf{Vision Transformer (ViT)} -- hiệu quả trong việc mã hóa tương tác toàn cục -- nhằm tạo ra một kiến trúc \textbf{tinh gọn, nhanh và phù hợp triển khai thực tế}.
-
-Mô hình được phát triển nhằm giải quyết hai hạn chế chính của các kiến trúc hiện hành:
-\begin{itemize}
-    \item \textbf{CNN thuần túy} thiếu khả năng tương tác toàn cục giữa các vùng không gian xa nhau.
-    \item \textbf{Vision Transformer} tuy mạnh về ngữ cảnh toàn cục nhưng có độ phức tạp tính toán bậc hai $O(N^2)$ (với $N$ là số token), dẫn đến chi phí cao, không phù hợp với thiết bị có tài nguyên hạn chế như điện thoại thông minh hoặc camera giám sát.
-\end{itemize}
-
-EdgeNext được thiết kế với các biến thể nhỏ gọn (XXS, XS, S), chỉ từ \textbf{1.3 triệu đến 5.6 triệu tham số}, đạt \textbf{Top-1 accuracy từ 71.2\% đến 79.4\% trên ImageNet} trong khi \textbf{FLOPs chỉ từ 0.3G đến 1.3G} -- vượt trội hơn nhiều so với các mô hình cùng kích thước như MobileViT, MobileNetV3 hay EfficientNet-Lite.
-
-\begin{quote}
-\textbf{Liên hệ với luận văn}: Trong nghiên cứu này, EdgeNext được chọn làm nền tảng kiến trúc cơ sở cho mô hình \textbf{EdgeFace} (sẽ trình bày ở mục 3.2.2), với mục tiêu thay thế backbone \textbf{ResNet20} trong mô hình \textbf{OPQN} \cite{chen2021opqn}. Việc sử dụng EdgeNext/EdgeFace giúp giảm đáng kể \textbf{độ phức tạp tính toán} và \textbf{bộ nhớ truy xuất} khi triển khai hệ thống truy xuất ảnh mặt người trên \textbf{tập dữ liệu có khả năng mở rộng}, đồng thời duy trì hoặc cải thiện hiệu suất nhận diện.
-\end{quote}
-
-\subsubsection{Nguyên tắc thiết kế và kiến trúc tổng thể}
-
-\paragraph{Nguyên tắc thiết kế}
-
-EdgeNext được xây dựng dựa trên ba nguyên tắc cốt lõi nhằm tối ưu hóa hiệu quả tính toán và độ chính xác:
-
-\begin{enumerate}
-    \item \textbf{Mã hóa toàn cục tuyến tính theo chiều kênh (Channel-wise Self-Attention)}: \\
-    Thay vì áp dụng self-attention trên không gian pixel (độ phức tạp $O(HW \cdot HW)$), EdgeNext sử dụng \textbf{Split Depth-wise Transpose Attention (SDTA)} -- một cơ chế attention hoạt động trên \textbf{chiều kênh} sau khi chuyển vị ma trận, giảm độ phức tạp xuống còn \textbf{$O(C^2)$} (với $C$ là số kênh). Điều này giúp mô hình vẫn nắm bắt được tương tác toàn cục nhưng với chi phí tính toán rất thấp.
-
-    \item \textbf{Convolution đa tỷ lệ thích ứng (Adaptive Multi-scale Convolution)}: \\
-    Sử dụng các kernel convolution có kích thước tăng dần qua các giai đoạn (3×3 \textrightarrow 5×5 \textrightarrow 7×7 \textrightarrow 9×9) để trích xuất đặc trưng ở nhiều tỷ lệ không gian mà không cần thêm nhánh song song (như Inception). Kết hợp với \textbf{depth-wise convolution}, phương pháp này giảm đáng kể số lượng tham số.
-
-    \item \textbf{Giảm thiểu số lượng block attention}: \\
-    Thay vì sử dụng nhiều block Transformer như MobileViT (9 block), EdgeNext chỉ sử dụng \textbf{3 block SDTA} trên toàn mạng, tập trung vào các giai đoạn sâu hơn, nơi thông tin toàn cục trở nên quan trọng. Điều này giúp giảm độ trễ suy luận trên thiết bị biên (ví dụ: chỉ 19.3ms trên Jetson Nano cho biến thể EdgeNext-S).
-\end{enumerate}
-
-\paragraph{Kiến trúc tổng thể}
-
-EdgeNext được tổ chức theo \textbf{kiến trúc phân cấp (stage-wise)} với \textbf{4 giai đoạn chính} và một \textbf{stem ban đầu}, tương tự các mạng CNN hiện đại. Cấu trúc được minh họa trong \textbf{Hình~\ref{fig:edgenext_architecture}} (trích từ \cite{george2024edgeface}).
-
+% --- CHÈN HÌNH 1: EDGENEXT ---
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.9\textwidth]{images/edgeNext.png}
-    \caption{Kiến trúc tổng thể của EdgeNext .}
-    \label{fig:edgenext_architecture}
+    \includegraphics[width=0.9\textwidth]{edgeNext.png}
+    \caption{Sơ đồ kiến trúc tổng thể của EdgeNeXt với 4 giai đoạn xử lý, kết hợp giữa bộ mã hóa CNN và SDTA \cite{maaz2022edgenext}.}
+    \label{fig:edgenext_arch}
 \end{figure}
+% -----------------------------
 
-\begin{verbatim}
-Input Image (3 × 224 × 224)
-     ↓
-[Stem]: Conv 4×4, stride 4 → (C1 × 56 × 56)
-     ↓
-Stage 1: 3 × Conv Encoder (kernel 3×3)
-     ↓
-Stage 2: Downsample (2×2) + 2 × Conv Encoder (5×5) + 1 × SDTA Encoder + Positional Encoding
-     ↓
-Stage 3: Downsample + 8 × Conv Encoder (7×7) + 1 × SDTA Encoder
-     ↓
-Stage 4: Downsample + 2 × Conv Encoder (9×9) + 1 × SDTA Encoder
-     ↓
-Global Average Pooling → Classifier
-\end{verbatim}
+\subsubsection{Cấu trúc phân cấp và Luồng xử lý dữ liệu}
+Kiến trúc của EdgeNeXt được tổ chức theo thiết kế phân cấp 4 giai đoạn (4-stage hierarchical design), tương đồng với các mạng CNN hiện đại nhưng được tích hợp cơ chế lai Transformer. Dữ liệu đầu vào sẽ trải qua quá trình biến đổi không gian và chiều sâu đặc trưng như sau:
 
+\paragraph{Giai đoạn tiền xử lý (Stem Layer):}
+Dữ liệu đầu vào là ảnh màu RGB có kích thước $H \times W \times 3$. Trước khi đi vào các khối encoder chính, ảnh được đưa qua lớp \textit{Patchify Stem}. Tại đây, một lớp tích chập không chồng lấp (non-overlapping convolution) với kích thước kernel $4 \times 4$ và bước trượt (stride) 4 được áp dụng \cite{maaz2022edgenext}.
 \begin{itemize}
-    \item \textbf{Stem}: Sử dụng một lớp convolution 4×4 (stride 4) không chồng lấp để giảm kích thước không gian nhanh chóng, sau đó áp dụng \textbf{Layer Normalization (LN)} thay vì BatchNorm để ổn định huấn luyện.
-    \item \textbf{Conv Encoder}: Mỗi block bao gồm:
-    \begin{itemize}
-        \item Depth-wise convolution (kernel thích ứng)
-        \item Hai point-wise convolution (1×1)
-        \item LayerNorm + GELU + Skip connection
-    \end{itemize}
-    \textrightarrow Công thức:
-    \[
-    x_{out} = x_{in} + \text{Linear}_2(\text{GELU}(\text{Linear}_1(\text{LN}(\text{DwConv}(x_{in})))))
-    \]
-    \item \textbf{SDTA Encoder}: Kết hợp depth-wise conv 3×3 và transpose attention theo chiều kênh. \\
-    \textrightarrow Công thức attention:
-    \[
-    \text{Attention}(Q, K, V) = V \cdot \text{softmax}\left(\frac{Q^T K}{\sqrt{d}}\right)
-    \]
-    với $Q, K, V \in \mathbb{R}^{C \times N}$, $d$ là chiều ẩn.
-    \item \textbf{Positional Encoding}: Chỉ được thêm vào \textbf{trước block SDTA ở Stage 2} để cung cấp thông tin vị trí mà không làm tăng độ trễ ở các giai đoạn sau.
+    \item \textbf{Tác dụng:} Giảm nhanh kích thước không gian của ảnh xuống 4 lần, biến đổi đầu vào thành các bản đồ đặc trưng (feature maps) sơ cấp có kích thước $\frac{H}{4} \times \frac{W}{4} \times C_1$.
+    \item \textbf{Kết quả:} Loại bỏ sự dư thừa của các pixel lân cận và chuẩn bị tensor đầu vào giàu thông tin cho Giai đoạn 1.
 \end{itemize}
 
-\textbf{Tóm lại}, EdgeNext là một bước tiến trong việc thiết kế mô hình thị giác tinh gọn, kết hợp hiệu quả giữa \textbf{tính cục bộ của CNN} và \textbf{tính toàn cục của Transformer} thông qua các cải tiến về attention tuyến tính và convolution đa tỷ lệ. Những nguyên tắc này không chỉ giúp mô hình hoạt động tốt trên thiết bị biên mà còn tạo nền tảng vững chắc cho các ứng dụng chuyên biệt như \textbf{nhận diện khuôn mặt} -- sẽ được phát triển thành \textbf{EdgeFace} trong phần tiếp theo.
-% Giới thiệu tổng quan về edgeface
-%% Trình bày EdgeFce là mô hình nhận diện khuôn mặt nhẹ, thiết kế cho thiết bị biên
-%% Nêu rõ mục tiêu tối ưu hóa hiệu quả tính toán và lưu trữ
-
-% Thích nghi cho nhận diện khuôn mặt
-%% Mô tả Edgeface dựa trên kiến trúc Edgenext, với các lớp linear được thay bằng Low Rank Linear(loRaLin) để giảm tham số và FLOPs.
-%% Đề cập điều chỉnh độ phân giải đầu vào thành 112x112 cho phù hợp với nhận diện khuôn mặt
-
-
-% Classification Head 
-%% giới thiệu classification Head gồm : Adaptive Average Pooling, LayerNorm, LoRaLin layer(tạo embedding 512 chiều)
-
-%Minh họa kiến trúc 
-%% Nhắc đến hình 1 trong bài báo gốc [George et al., 2024], minh họa sơ đồ kiến trúc EdgeFace, bao gồm các stage với bộ mã hóa 
-
-
-% Kết luận ngắn gọn 
-%% Tóm tắt EdgeFace là mô hình hiệu quả, sử dụng LoRaLin và classification head để tạo embedding chất lượng cao 
-
-
-
-\subsection{Kiến trúc EdgeNeXt}
-
-EdgeNeXt là một kiến trúc thị giác lai (\textit{hybrid architecture}) kết hợp giữa \textbf{Convolutional Neural Network (CNN)} và \textbf{Transformer}. Mục tiêu của EdgeNeXt là khai thác điểm mạnh của cả hai hướng tiếp cận: CNN hiệu quả trong việc trích xuất đặc trưng cục bộ, trong khi Transformer có khả năng mô hình hóa ngữ cảnh toàn cục. Bằng cách kết hợp, EdgeNeXt vừa giữ được độ chính xác cao, vừa duy trì chi phí tính toán thấp, phù hợp để triển khai trên \textit{thiết bị biên}. 
-
-Khác với ConvNeXt – mô hình gốc mà EdgeNeXt phát triển từ đó – EdgeNeXt được thiết kế lại với các cơ chế tính toán nhẹ hơn, nhằm giảm số tham số và phép nhân-cộng (MAdds), đồng thời vẫn đảm bảo hiệu quả trên các tác vụ thị giác máy tính quy mô lớn.
-
-\subsubsection{Bộ mã hóa Split Depth-wise Transpose Attention (SDTA)}
-Trọng tâm đổi mới của EdgeNeXt nằm ở \textbf{SDTA encoder}, một khối mã hóa đặc trưng gọn nhẹ nhưng mạnh mẽ. Cơ chế của SDTA bao gồm:
+\paragraph{Giai đoạn 1 (Local Feature Extraction):}
+Giai đoạn này tập trung hoàn toàn vào việc trích xuất các đặc trưng cục bộ (như cạnh, góc, vân bề mặt).
 \begin{itemize}
-    \item \textbf{Phân chia nhóm kênh}: tensor đầu vào được tách thành nhiều nhóm kênh để xử lý song song, giúp giảm tải tính toán.
-    \item \textbf{Depth-wise convolution}: áp dụng tích chập theo từng kênh để nắm bắt thông tin cục bộ với chi phí rẻ.
-    \item \textbf{Self-attention dạng hoán vị}: sử dụng truy vấn (query) và khóa (key) được hoán vị theo chiều kênh, cho phép tính toán attention với độ phức tạp tuyến tính thay vì bậc hai.
+    \item \textbf{Khối xử lý:} Sử dụng 3 khối \textbf{Conv Encoder} liên tiếp với kernel kích thước nhỏ $3 \times 3$ \cite{maaz2022edgenext}.
+    \item \textbf{Luồng dữ liệu:} Tensor đặc trưng giữ nguyên kích thước không gian $\frac{H}{4} \times \frac{W}{4}$ nhưng được làm giàu thông tin ngữ nghĩa qua các lớp tích chập chiều sâu (depth-wise).
+    \item \textbf{Đặc điểm:} Tại đây, mô hình chưa sử dụng cơ chế Attention để tiết kiệm chi phí tính toán, do các đặc trưng mức thấp chưa yêu cầu ngữ cảnh toàn cục.
 \end{itemize}
 
-Nhờ thiết kế này, SDTA mở rộng được \textit{trường tiếp nhận} (receptive field) mà không cần tăng nhiều tham số. Kết quả là mô hình có thể biểu diễn đặc trưng đa tỷ lệ (\textit{multi-scale features}), rất quan trọng cho các tác vụ nhận diện và phân loại ảnh.
+\paragraph{Giai đoạn 2 (Hybrid Transition):}
+Đây là giai đoạn chuyển tiếp quan trọng, nơi mô hình bắt đầu kết hợp thông tin toàn cục.
+\begin{itemize}
+    \item \textbf{Downsampling:} Đầu tiên, lớp \textit{Downsampling} (tích chập sải bước $2 \times 2$) giảm kích thước không gian xuống còn $\frac{H}{8} \times \frac{W}{8}$ và tăng số kênh lên $C_2$ \cite{maaz2022edgenext}.
+    \item \textbf{Positional Encoding (PE):} Một điểm đặc biệt trong thiết kế của EdgeNeXt là việc chèn \textit{Positional Encoding} tại giai đoạn này. PE giúp mô hình nhận biết vị trí không gian của các đặc trưng trước khi đưa vào khối Attention. Việc chỉ thêm PE ở giai đoạn này giúp giảm độ trễ tính toán so với việc thêm ở mọi giai đoạn \cite{maaz2022edgenext}.
+    \item \textbf{Khối xử lý:} Sử dụng 2 khối Conv Encoder (với kernel lớn hơn: $5 \times 5$) để mở rộng trường tiếp nhận, theo sau là 1 khối \textbf{SDTA Encoder} để bắt đầu mô hình hóa quan hệ toàn cục.
+\end{itemize}
 
-\subsubsection{Kernel thích ứng}
-Để tăng cường khả năng mô hình hóa thông tin toàn cục, EdgeNeXt sử dụng \textbf{kernel tích chập thích ứng} qua từng giai đoạn (stage). Cụ thể, các lớp đầu thường sử dụng kernel nhỏ (ví dụ: $3 \times 3$) nhằm tập trung vào chi tiết cục bộ, trong khi các lớp sâu hơn chuyển sang kernel lớn hơn (ví dụ: $9 \times 9$) để khai thác thông tin toàn ảnh. Cách tiếp cận này cho phép mô hình dần dần tích hợp ngữ cảnh rộng hơn mà không làm chi phí tính toán tăng đột biến.
+\paragraph{Giai đoạn 3 (Deep Global Context):}
+Đây là giai đoạn chiếm phần lớn năng lực tính toán của mạng (8 khối Conv Encoder).
+\begin{itemize}
+    \item \textbf{Downsampling:} Kích thước giảm xuống $\frac{H}{16} \times \frac{W}{16}$, số kênh tăng lên $C_3$.
+    \item \textbf{Adaptive Kernel:} Các khối Conv Encoder tại đây sử dụng kernel kích thước lớn $7 \times 7$. Kernel lớn đóng vai trò thay thế một phần cho Self-Attention trong việc nhìn bao quát các vùng ảnh rộng hơn \cite{maaz2022edgenext}.
+    \item \textbf{Kết thúc giai đoạn:} Một khối SDTA Encoder được đặt ở cuối để tinh chỉnh các đặc trưng bậc cao, đảm bảo sự kết hợp giữa thông tin cục bộ mạnh mẽ (từ Conv) và thông tin toàn cục (từ SDTA).
+\end{itemize}
 
-\subsubsection{Các biến thể của EdgeNeXt}
-Để đáp ứng đa dạng yêu cầu tài nguyên, EdgeNeXt được triển khai dưới nhiều biến thể: \textbf{Small}, \textbf{X-Small} và \textbf{XX-Small}. Các phiên bản này khác nhau về độ sâu mạng, số kênh đặc trưng và tổng tham số, từ đó cho phép người dùng cân nhắc giữa độ chính xác và chi phí tính toán. Bảng~1 trong bài báo gốc~\cite{george2024edgeface} minh họa chi tiết cấu trúc lớp, số kênh và đầu ra của từng biến thể, cung cấp sự linh hoạt cao trong triển khai thực tế.
+\paragraph{Giai đoạn 4 (High-level Abstraction):}
+Giai đoạn cuối cùng tạo ra các đặc trưng trừu tượng nhất để phục vụ cho việc định danh.
+\begin{itemize}
+    \item \textbf{Downsampling:} Kích thước không gian chỉ còn $\frac{H}{32} \times \frac{W}{32}$ với số kênh $C_4$.
+    \item \textbf{Khối xử lý:} Sử dụng kernel rất lớn $9 \times 9$ trong Conv Encoder và kết thúc bằng 1 khối SDTA Encoder \cite{maaz2022edgenext}.
+    \item \textbf{Đầu ra:} Tensor cuối cùng chứa đựng thông tin ngữ nghĩa cô đọng nhất, sẵn sàng được đưa vào các lớp pooling và classification (hoặc trong trường hợp của EdgeFace là lớp embedding).
+\end{itemize}
 
-\subsubsection{Hiệu suất và minh họa}
-Theo các thực nghiệm trong~\cite{george2024edgeface}, EdgeNeXt đạt hiệu suất vượt trội so với nhiều mô hình lightweight khác như MobileViT hay EdgeFormer, đặc biệt trong tác vụ phân loại ảnh. Ưu điểm nổi bật là đạt độ chính xác tương đương hoặc cao hơn trong khi chi phí tính toán thấp hơn đáng kể. Ngoài ra, sơ đồ cấu trúc và thông số minh họa ở Bảng~1 cung cấp cái nhìn trực quan về cách EdgeNeXt đạt được sự cân bằng giữa độ chính xác và hiệu quả tính toán.\\
+\subsubsection{Giải phẫu các thành phần chức năng}
 
+Để hiểu rõ tại sao EdgeNeXt đạt hiệu suất cao, ta cần phân tích chi tiết hai khối chức năng chính trong sơ đồ: \textbf{Conv Encoder} và \textbf{SDTA Encoder}.
 
+\paragraph{1. Bộ mã hóa Conv Encoder (Convolutional Encoder)}
+Đây là khối nền tảng giúp EdgeNeXt hiện đại hóa kiến trúc CNN truyền thống (tương tự ConvNeXt). Luồng dữ liệu $x_i$ đi qua khối này như sau:
+\begin{equation}
+    x_{i+1} = x_{i} + \text{Linear}_{ptwise}(\text{GELU}(\text{Linear}_{ptwise}(\text{LN}(\text{DwConv}_{k \times k}(x_{i})))))
+\end{equation}
+Trong đó:
+\begin{itemize}
+    \item \textbf{Adaptive Depth-wise Conv ($k \times k$):} Thay vì dùng kích thước cố định, $k$ thay đổi theo giai đoạn ($3, 5, 7, 9$). Điều này giúp mô hình thích ứng: ở các lớp nông dùng $k$ nhỏ để bắt chi tiết, ở các lớp sâu dùng $k$ lớn để bắt ngữ cảnh \cite{maaz2022edgenext}.
+    \item \textbf{Point-wise Conv:} Hai lớp tích chập $1 \times 1$ hoạt động như một mạng MLP đảo ngược (Inverted Bottleneck), giúp trộn thông tin giữa các kênh (channel mixing) để làm giàu đặc trưng.
+\end{itemize}
 
-\begin{table}[ht]
-  \caption{So sánh các mô hình lightweight: EdgeNeXt, MobileViT, EdgeFormer, EdgeFace(Số liệu ảo)}
-  \label{tab:compare_lightweight}
-  \centering
-  \begin{tabularx}{\textwidth}{l c c p{3cm} p{3.2cm}}
-    \toprule
-    \textbf{Mô hình} & \textbf{Tham số} & \textbf{MAdds} & \textbf{Độ chính xác} & \textbf{Ghi chú} \\
-    \midrule
-    EdgeNeXt (Small) & $\sim$1.3M & thấp & Top-1 $\approx$ 71.2\% (ImageNet) & Giảm FLOPs $\sim$28\% so với MobileViT \\
-    MobileViT & — & — & — & Đối thủ lightweight CNN–Transformer \\
-    EdgeFormer & — & — & — & Mô hình lai lightweight, dùng cho biên \\
-    EdgeFace & $\sim$1.77M & — & LFW 99.73\%; IJB-B 92.67\%; IJB-C 94.85\% & Tối ưu dưới 2M tham số, dùng LoRaLin \\
-    \bottomrule
-  \end{tabularx}
-\end{table} 
+\paragraph{2. Bộ mã hóa SDTA (Split Depth-wise Transpose Attention)}
+Đây là "trái tim" của kiến trúc lai, giải quyết bài toán chi phí tính toán của Vision Transformer. SDTA bao gồm hai nhánh xử lý song song:
 
+\textbf{a) Nhánh trộn không gian đa tỷ lệ (Multi-scale Spatial Mixing):} \\
+Lấy cảm hứng từ Res2Net, tensor đầu vào được chia (Split) thành $s$ nhóm kênh con.
+\begin{itemize}
+    \item Các nhóm kênh này đi qua một hệ thống tích chập chiều sâu $3 \times 3$ phân tầng.
+    \item Đầu ra của nhóm trước được cộng dồn vào đầu vào của nhóm sau. Cơ chế này giúp mỗi nhóm kênh có một trường tiếp nhận (receptive field) khác nhau, cho phép mô hình nhìn thấy vật thể ở nhiều kích thước khác nhau cùng lúc \cite{maaz2022edgenext}.
+\end{itemize}
 
-Tóm lại, EdgeNeXt là một kiến trúc lai kết hợp CNN và Transformer, trong đó SDTA encoder và kernel thích ứng đóng vai trò trung tâm. Nhờ thiết kế này, EdgeNeXt đạt được sự cân bằng giữa khả năng biểu diễn và chi phí tính toán, trở thành lựa chọn phù hợp cho các ứng dụng thị giác trên thiết bị biên.
+\textbf{b) Nhánh chú ý chuyển vị (Transpose Attention):} \\
+Thay vì tính toán Self-Attention truyền thống (độ phức tạp $O(N^2)$ theo số pixel), SDTA thực hiện tính toán trên chiều kênh (Cross-covariance attention):
+\begin{itemize}
+    \item \textbf{Query (Q) và Key (K):} Được chiếu (projection) và chuẩn hóa.
+    \item \textbf{Dot-product:} Thay vì nhân $Q \cdot K^T$ (theo không gian), SDTA thực hiện nhân $Q^T \cdot K$ (theo kênh). Điều này tạo ra ma trận attention map kích thước $C \times C$ thay vì $HW \times HW$.
+    \item \textbf{Độ phức tạp:} Giảm xuống $O(N C^2)$ (tuyến tính với độ phân giải ảnh $N$), giúp mô hình chạy cực nhanh trên thiết bị biên mà vẫn nắm bắt được thông tin toàn cục \cite{maaz2022edgenext}.
+\end{itemize}
 
-%Mở đầu: Giới thiệu tổng quan về EdgeNeXt
+\subsubsection{Kết luận về vai trò Backbone}
+Thông qua việc phân tích luồng dữ liệu và cấu trúc khối, có thể thấy EdgeNeXt không chỉ đơn thuần giảm số lượng tham số. Cơ chế \textit{Kernel thích ứng} giúp nó duy trì khả năng trích xuất đặc trưng mạnh mẽ như các mạng CNN lớn, trong khi \textit{SDTA Encoder} cung cấp khả năng mô hình hóa toàn cục mà ResNet20 hoàn toàn thiếu. Đây là lý do cốt lõi khiến các vector đặc trưng đầu ra của EdgeNeXt (và sau này là EdgeFace) có chất lượng cao hơn, giúp hệ thống OPQN cải thiện độ chính xác trong truy xuất và nhận diện.
 
-%%Trình bày EdgeNeXt là một kiến trúc hybrid kết hợp CNN và Transformer, được thiết kế để tối ưu cho thiết bị biên với số lượng tham số và phép tính (MAdds) thấp.
-%%Nêu rõ EdgeNeXt phát triển dựa trên ConvNeXt, cải tiến để phù hợp cho các ứng dụng thị giác máy tính.
+\subsection{Kiến trúc EdgeFace: Tinh chỉnh chuyên biệt cho Nhận diện khuôn mặt}
+\label{subsec:edgeface_detail}
 
-%Split Depth-wise Transpose Attention (SDTA) Encoder
+Kế thừa tư duy thiết kế lai (hybrid) ưu việt của EdgeNeXt, chúng tôi đề xuất sử dụng **EdgeFace** \cite{george2024edgeface} làm mạng xương sống (backbone) cho hệ thống OPQN. EdgeFace không chỉ đơn thuần áp dụng lại mô hình phân loại ảnh, mà thực hiện các thay đổi cấu trúc chiến lược để chuyển đổi từ bài toán phân loại vật thể sang bài toán trích xuất đặc trưng định danh (Identity Embedding) với độ chính xác cao và kích thước tối thiểu.
 
-%%Mô tả SDTA là thành phần cốt lõi, phân chia tensor đầu vào thành các nhóm kênh.
-%%Giải thích cơ chế: Sử dụng depth-wise convolution kết hợp self-attention theo chiều kênh (transposed query-key) để đạt độ phức tạp tuyến tính.
-%%Nêu vai trò của SDTA: Mở rộng trường tiếp nhận (receptive field) và mã hóa đặc trưng đa tỷ lệ (multi-scale).
+Dưới đây là phân tích chi tiết luồng xử lý và các cải tiến trọng yếu của EdgeFace so với nguyên bản EdgeNeXt, dựa trên sơ đồ kiến trúc được trình bày trong Hình \ref{fig:edgeface_arch}.
 
-%Kernel thích ứng
-
-%%Mô tả việc sử dụng kernel kích thước khác nhau qua các stage (3x3 ở lớp đầu, lớn hơn như 9x9 ở lớp sau) để thu thập thông tin toàn cục.
-%%Đề cập rằng kernel thích ứng giúp tăng cường khả năng mã hóa đặc trưng toàn cục.
-
-%Các biến thể của EdgeNeXt
-
-%%Giới thiệu các biến thể: Small, X-Small, XX-Small, với kích thước đặc trưng và tham số khác nhau (tham khảo Table 1 trong bài báo gốc [George et al., 2024]).
-%%Nêu rõ các biến thể cung cấp tính linh hoạt tùy thuộc vào yêu cầu tài nguyên.
-
-%Hiệu suất và minh họa
-
-%%Nhắc đến hiệu suất của EdgeNeXt: Vượt trội so với MobileViT và EdgeFormer trong nhận diện hình ảnh với chi phí tính toán thấp.
-%%Đề cập Table 1 minh họa cấu trúc lớp, kích thước đầu ra, và số kênh cho các biến thể.
-
-%Kết luận ngắn gọn
-
-%%Tóm tắt rằng EdgeNeXt kết hợp CNN và Transformer với SDTA và kernel thích ứng, cung cấp kiến trúc hiệu quả cho các ứng dụng trên thiết bị biên.
-
-\subsection{Mô-đun tuyến tính hạng thấp(LoRaLin)}
-
- 
-Trong các kiến trúc học sâu, đặc biệt là trong các mô hình nhận diện khuôn mặt, các lớp tuyến tính (\textit{fully connected layers}) thường chiếm một tỷ lệ lớn số tham số và chi phí tính toán. Để giải quyết thách thức này trong bối cảnh triển khai trên thiết bị biên, EdgeFace giới thiệu \textbf{Low Rank Linear Module (LoRaLin)} như một cải tiến quan trọng. Mục tiêu của LoRaLin là giảm đáng kể số lượng tham số và phép tính (\textit{Multiply-Adds, MAdds}) trong khi chỉ làm suy giảm hiệu suất ở mức tối thiểu.
-
-\paragraph{Cơ chế phân tích low-rank.} 
-Ý tưởng cốt lõi của LoRaLin là phân tích ma trận trọng số full-rank thành hai ma trận hạng thấp. Cho một lớp tuyến tính chuẩn với ma trận trọng số $W \in \mathbb{R}^{M \times N}$, LoRaLin thay thế bằng tích của hai ma trận nhỏ hơn:
-\[
-    W_{M \times N} \approx W_{M \times r} \cdot W_{r \times N},
-\]
-trong đó $r$ là \textit{rank} được xác định theo công thức:
-\[
-    r = \max(2, \gamma \cdot \min(M,N)),
-\]
-với $\gamma$ là tham số \textit{rank-ratio}. Cách tiếp cận này tương đương với việc thay thế một lớp tuyến tính duy nhất bằng hai lớp tuyến tính liên tiếp: lớp thứ nhất giảm chiều xuống $r$, và lớp thứ hai ánh xạ trở lại không gian đầu ra. Hình~2 trong bài báo gốc~\cite{george2024edgeface} minh họa trực quan cơ chế này.\\
-
-
-
-\paragraph{Điều chỉnh Rank-ratio ($\gamma$).} 
-Tham số $\gamma$ quyết định mức độ giảm hạng và do đó ảnh hưởng trực tiếp đến số tham số và FLOPs. Kết quả thực nghiệm (Hình~3 trong~\cite{george2024edgeface}) cho thấy:
-\begin{figure}[ht]
+% --- CHÈN HÌNH 2: EDGEFACE ---
+\begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.65\textwidth]{images/fig3.2.3.png} % đường dẫn 
-    \caption{Ảnh hưởng của tham số \textit{Rank-ratio} ($\gamma$) đến số lượng tham số của mô hình (MPARAMS) và số phép nhân-cộng (MFLOPs). 
-    Đường nét đứt thể hiện giá trị tham chiếu của mô hình gốc khi sử dụng lớp tuyến tính thông thường. 
-    Có thể thấy khi $\gamma$ giảm, số tham số và FLOPs giảm đáng kể, trong khi vẫn duy trì hiệu suất gần như không đổi.}
-    \label{fig:lora_lin_rank}
-    
+    \includegraphics[width=0.9\textwidth]{edgeface.png}
+    \caption{Kiến trúc EdgeFace với các cải tiến LoRaLin và bộ giải mã STDA, tối ưu hóa cho nhận diện khuôn mặt \cite{george2024edgeface}.}
+    \label{fig:edgeface_arch}
 \end{figure}
+% -----------------------------
 
+\subsubsection{Thích ứng độ phân giải và Tiền xử lý}
+Sự thay đổi đầu tiên và căn bản nhất nằm ở đầu vào của mạng:
 \begin{itemize}
-    \item Khi $\gamma < 0.8$, số tham số và FLOPs giảm đáng kể so với lớp tuyến tính chuẩn.
-    \item Ở $\gamma \approx 0.6$, EdgeFace đạt \textbf{sự cân bằng tối ưu}: giảm khoảng $20\%$ số tham số và FLOPs, trong khi suy giảm hiệu suất dưới $0.5\%$.
+    \item \textbf{Chuẩn hóa đầu vào ($112 \times 112$):} Khác với EdgeNeXt sử dụng đầu vào $256 \times 256$ cho phân loại ảnh tự nhiên, EdgeFace được tối ưu hóa cho kích thước $112 \times 112$ \cite{george2024edgeface}. Đây là tiêu chuẩn vàng trong các hệ thống nhận diện khuôn mặt hiện đại (như ArcFace \cite{arcface}, CosFace \cite{cosface}), giúp loại bỏ các thông tin nền nhiễu và tập trung tối đa vào cấu trúc khuôn mặt trung tâm sau khi đã được căn chỉnh.
+    \item \textbf{Ý nghĩa với OPQN \cite{opqn}:} Việc giảm kích thước đầu vào không chỉ tăng tốc độ suy luận mà còn giảm đáng kể bộ nhớ đệm (feature map memory footprint) ngay từ các lớp đầu tiên, tạo điều kiện cho hệ thống xử lý song song nhiều luồng video hơn trên cùng một tài nguyên phần cứng.
 \end{itemize}
-Điều này chứng tỏ LoRaLin mang lại khả năng nén mô hình hiệu quả với trade-off tối thiểu về độ chính xác.
 
-\paragraph{Triển khai và minh họa.} 
-Trong PyTorch, LoRaLin có thể được triển khai đơn giản bằng cách xâu chuỗi hai lớp tuyến tính:
+\subsubsection{Luồng dữ liệu qua các giai đoạn (Stage-wise Data Flow)}
+Dữ liệu khuôn mặt sau khi chuẩn hóa sẽ đi qua 4 giai đoạn xử lý đặc trưng. Mặc dù giữ lại bộ khung 4-stage của EdgeNeXt để tận dụng khả năng trích xuất đa tỷ lệ, EdgeFace thực hiện một cuộc "phẫu thuật" sâu bên trong từng khối mã hóa (Encoder Block) \cite{george2024edgeface}:
+
+\paragraph{Giai đoạn 1 \& 2: Trích xuất đặc trưng cục bộ mức thấp}
 \begin{itemize}
-    \item \texttt{lin1}: ánh xạ từ \texttt{in\_feat} $\to$ \texttt{rank}.
-    \item \texttt{lin2}: ánh xạ từ \texttt{rank} $\to$ \texttt{out\_feat}.
+    \item \textbf{Cấu trúc:} Dữ liệu đi qua các lớp Conv Encoder với kernel nhỏ ($3 \times 3$ và $5 \times 5$). 
+    \item \textbf{Cải tiến bên trong:} Trong mỗi khối Conv Encoder của EdgeFace, các lớp chiếu (projection layers) truyền thống (Point-wise Conv $1\times1$) đã được thay thế bằng các mô-đun **LoRaLin**. Sự thay thế này giúp giảm mạnh số lượng tham số ngay tại các lớp tích chập dày đặc nhất mà không làm mất đi thông tin chi tiết của các đặc trưng cạnh, đường nét khuôn mặt \cite{george2024edgeface}.
 \end{itemize}
-Nhờ thiết kế này, LoRaLin có thể thay thế trực tiếp các lớp tuyến tính truyền thống trong EdgeFace mà không làm phức tạp thêm quá trình huấn luyện hay suy luận. Trên thực tế, toàn bộ các lớp fully connected trong EdgeFace đều được thay bằng LoRaLin để tối ưu hiệu quả tính toán.
 
-\paragraph{Kết luận.} 
-Tóm lại, \textbf{LoRaLin} là một giải pháp gọn nhẹ và hiệu quả để giảm số tham số và FLOPs trong các lớp fully connected. Với cơ chế phân tích hạng thấp và khả năng điều chỉnh linh hoạt qua $\gamma$, LoRaLin cho phép EdgeFace duy trì chất lượng biểu diễn embedding gần như không suy giảm, đồng thời đáp ứng yêu cầu triển khai trên thiết bị biên.
+\paragraph{Giai đoạn 3: Mở rộng ngữ cảnh và Tương tác toàn cục}
+\begin{itemize}
+    \item \textbf{Adaptive Kernel $7 \times 7$:} Tại đây, EdgeFace sử dụng kernel lớn để "nhìn" được các bộ phận khuôn mặt trong mối tương quan xa hơn (ví dụ: khoảng cách giữa mắt và miệng).
+    \item \textbf{SDTA Encoder tối ưu hóa:} Khối SDTA ở cuối giai đoạn này đóng vai trò then chốt trong việc liên kết thông tin. Khác với EdgeNeXt gốc, EdgeFace tích hợp LoRaLin vào sâu trong cơ chế Attention: cả 3 ma trận chiếu Query (Q), Key (K), Value (V) và lớp chiếu đầu ra đều được thay thế \cite{george2024edgeface}. Điều này biến khối Attention vốn đắt đỏ trở nên cực kỳ nhẹ, cho phép mô hình nắm bắt được cấu trúc hình học bất biến của khuôn mặt (ví dụ: góc nghiêng, biểu cảm) với chi phí thấp nhất.
+\end{itemize}
 
-\subsection{Chi tiết huấn luyện}
-\subsubsection{Chiến lược huấn luyện}
+\paragraph{Giai đoạn 4: Đặc trưng định danh trừu tượng}
+\begin{itemize}
+    \item \textbf{Siêu kết nối:} Sử dụng kernel cực lớn $9 \times 9$ kết hợp với SDTA Encoder cuối cùng. Tensor đầu ra tại đây ($7 \times 7 \times C_4$) chứa đựng thông tin định danh cô đọng nhất, đã được lọc bỏ hầu hết các biến thiên về ánh sáng hay phông nền.
+\end{itemize}
 
-EdgeFace được huấn luyện nhằm tối ưu hóa hiệu suất nhận diện khuôn mặt trong điều kiện hạn chế tài nguyên trên thiết bị biên. 
-Quy trình huấn luyện tận dụng tập dữ liệu quy mô lớn kết hợp với các chiến lược tối ưu hóa để vừa nâng cao độ chính xác, vừa duy trì tính gọn nhẹ của mô hình \cite{george2024edgeface}.
+\subsubsection{Embedding Head: Kiến trúc đầu ra chuyên biệt}
+Sự thay đổi mang tính quyết định để EdgeFace thay thế được ResNet20 trong OPQN nằm ở phần "Head" (khối xuất kết quả). EdgeFace loại bỏ hoàn toàn lớp phân lớp 1000-nhãn của ImageNet và xây dựng lại một quy trình tạo vector nhúng như sau \cite{george2024edgeface}:
 
-\textbf{Dataset.} Mô hình được huấn luyện trên các tập con WebFace12M và WebFace4M, được trích xuất từ WebFace260M. 
-Các ảnh trong tập dữ liệu này đã được căn chỉnh khuôn mặt và chuẩn hóa độ phân giải về $112\times112$, phù hợp với tiêu chuẩn của các hệ thống nhận diện khuôn mặt.
+\begin{enumerate}
+    \item \textbf{Adaptive Average Pooling (AdaAvgPool2D):} Nén toàn bộ thông tin không gian của tensor cuối cùng ($7 \times 7$) thành một vector đặc trưng thô ($1 \times 1$).
+    \item \textbf{Layer Normalization \& Dropout:} Giúp ổn định phân phối đặc trưng và ngăn chặn hiện tượng quá khớp (overfitting), đảm bảo vector đại diện có tính tổng quát cao.
+    \item \textbf{Projection to 512-D:} Cuối cùng, một lớp LoRaLin đặc biệt được sử dụng để chiếu đặc trưng thô sang không gian vector 512 chiều (512-D Embedding) \cite{george2024edgeface}.
+\end{enumerate}
 
-\textbf{Tiền xử lý và tăng cường dữ liệu.} Dữ liệu đầu vào được chuyển đổi thành tensor và chuẩn hóa về khoảng $[-1,1]$. 
-Quá trình tăng cường dữ liệu được thực hiện bằng thư viện DALI, bao gồm các phép biến đổi như chuyển đổi ngẫu nhiên sang thang xám, thay đổi kích thước, và làm mờ, nhằm tăng tính đa dạng và tính khái quát của mô hình.
+\textbf{Giá trị cốt lõi:} Vector 512 chiều này chính là đầu vào lý tưởng cho mô hình lượng tử hóa OPQN \cite{opqn}. So với vector 64 hoặc 128 chiều của ResNet20 cũ, vector 512 chiều của EdgeFace mang mật độ thông tin ngữ nghĩa cao hơn gấp nhiều lần, giúp tăng độ phân biệt (discriminative power) giữa các danh tính, nhưng lại được tạo ra bởi một mạng lưới có số lượng tham số ít hơn. Đây chính là "điểm ngọt" (sweet spot) về hiệu năng/chi phí mà hệ thống hướng tới.
+\subsection{Mô-đun Tuyến tính Hạng thấp (LoRaLin)}
+\label{subsec:loralin}
 
-\textbf{Chi tiết huấn luyện.} Mô hình được huấn luyện trên 4--8 GPU Nvidia RTX 3090 (24GB) với chiến lược \textit{distributed training}. 
-Optimizer AdamW kết hợp với hàm mất mát CosFace được sử dụng để tối ưu embedding. 
-Lịch trình learning rate theo \textit{polynomial decay with restarts} giúp mô hình hội tụ ổn định. 
-Batch size dao động từ 256 đến 512 tùy thuộc vào kích thước mô hình, và PartialFC được áp dụng để xử lý số lượng lớn danh tính trong tập dữ liệu.
+Trong các kiến trúc mạng nơ-ron sâu, mặc dù các lớp tích chập (Convolution) đã được tối ưu hóa rất tốt, các lớp kết nối đầy đủ (Fully Connected - Linear Layers) vẫn chiếm một tỷ trọng đáng kể về số lượng tham số và chi phí tính toán (FLOPs), đặc biệt là ở các tầng sâu nơi số lượng kênh đặc trưng lớn. Để giải quyết nút thắt cổ chai này trong bối cảnh thiết bị biên, EdgeFace giới thiệu mô-đun **LoRaLin (Low Rank Linear)** \cite{george2024edgeface}.
 
-\textbf{Inference.} Trong giai đoạn suy luận, \textit{classification head} được loại bỏ. 
-Mô hình chỉ sử dụng vector embedding 512 chiều làm biểu diễn đặc trưng cho so sánh và truy hồi khuôn mặt.
+Mô-đun này được lấy cảm hứng từ kỹ thuật Low-Rank Adaptation (LoRA) thường dùng trong tinh chỉnh các mô hình ngôn ngữ lớn, nhưng được cải biên để thay thế hoàn toàn các lớp tuyến tính truyền thống ngay từ giai đoạn thiết kế kiến trúc.
 
-Tóm lại, quy trình huấn luyện của EdgeFace kết hợp dữ liệu quy mô lớn, tiền xử lý hiệu quả, và các kỹ thuật tối ưu hóa hiện đại, từ đó đạt được hiệu suất cao trong khi vẫn đảm bảo khả năng triển khai trên thiết bị biên.
+\subsubsection{Cơ sở toán học và Phân rã ma trận}
+Nguyên lý cốt lõi của LoRaLin dựa trên giả thuyết về "chiều nội tại thấp" (low intrinsic dimension) của dữ liệu. Giả sử một lớp tuyến tính tiêu chuẩn thực hiện phép ánh xạ từ đầu vào $X$ có kích thước $M$ sang đầu ra $Y$ có kích thước $N$:
+\begin{equation}
+    Y = W_{M \times N} X + b
+\end{equation}
+Trong đó $W \in \mathbb{R}^{M \times N}$ là ma trận trọng số hạng đầy đủ (full-rank). Số lượng tham số cần lưu trữ là $M \times N$.
 
+LoRaLin thay thế ma trận $W$ này bằng tích của hai ma trận hạng thấp hơn (low-rank matrices), ký hiệu là $W_{down}$ và $W_{up}$:
+\begin{equation}
+    W_{M \times N} \approx W_{up} \cdot W_{down} = W_{r \times N} \cdot W_{M \times r}
+\end{equation}
+Trong đó:
+\begin{itemize}
+    \item $W_{down} \in \mathbb{R}^{M \times r}$: Ma trận chiếu xuống không gian chiều thấp (Down-projection).
+    \item $W_{up} \in \mathbb{R}^{r \times N}$: Ma trận chiếu lên không gian chiều cao (Up-projection).
+    \item $r$: Hạng của ma trận (Rank), với điều kiện $r \ll \min(M, N)$.
+\end{itemize}
 
+Lúc này, phép tính lớp tuyến tính được triển khai qua hai bước tuần tự:
+\begin{equation}
+    Y = W_{up}(W_{down}(X)) + b
+\end{equation}
 
+Số lượng tham số giảm từ $M \times N$ xuống còn $r(M + N)$. Khi $r$ đủ nhỏ, lượng tham số tiết kiệm được là rất lớn.
 
+\subsubsection{Cơ chế điều khiển tỷ lệ hạng (Rank-ratio)}
+Để cân bằng giữa mức độ nén và khả năng biểu diễn thông tin, EdgeFace không cố định một giá trị $r$ cứng nhắc mà sử dụng tham số **Rank-ratio ($\gamma$)** để xác định hạng động cho từng lớp \cite{george2024edgeface}:
+\begin{equation}
+    r = \max(2, \text{int}(\gamma \cdot \min(M, N)))
+\end{equation}
+Trong đó $\gamma \in (0, 1]$ là tỷ lệ phần trăm giữ lại của chiều thông tin.
+\begin{itemize}
+    \item Nếu $\gamma = 1.0$: Mô hình hoạt động như lớp Linear truyền thống.
+    \item Nếu $\gamma < 1.0$: Mô hình thực hiện nén tham số.
+\end{itemize}
 
+Trong kiến trúc EdgeFace được sử dụng cho hệ thống OPQN, chúng tôi thiết lập $\gamma \approx 0.6$. Các thực nghiệm trong nghiên cứu gốc \cite{george2024edgeface} đã chứng minh rằng tại ngưỡng này, mô hình đạt được "điểm ngọt" (sweet spot): giảm khoảng **20\%** tổng số lượng tham số và phép tính nhân-cộng (MAdds) so với mạng gốc, trong khi độ chính xác nhận diện trên tập dữ liệu khó như IJB-C chỉ giảm không đáng kể (dưới 0.5\%).
 
+\subsubsection{Tích hợp trong kiến trúc EdgeFace}
+Như được minh họa trong thành phần màu tím ("NxM LoRaLin") ở Hình \ref{fig:edgeface_arch}, LoRaLin được áp dụng đồng bộ tại hai vị trí chiến lược:
+
+\begin{enumerate}
+    \item \textbf{Thay thế trong khối Encoder:} Tất cả các lớp Point-wise Convolution (thực chất là các lớp Linear $1 \times 1$) trong các khối Conv Encoder và SDTA Encoder đều được thay thế bằng LoRaLin. Điều này giúp giảm tải tính toán ngay trong quá trình trích xuất đặc trưng.
+    
+    \item \textbf{Tầng chiếu Embedding (Projection Head):} Lớp cuối cùng chuyển đổi từ đặc trưng thô sang vector định danh 512 chiều (dùng cho OPQN) sử dụng LoRaLin để đảm bảo vector đầu ra tuy có số chiều lớn (512) nhưng được tạo sinh từ một không gian tham số gọn nhẹ, tránh hiện tượng quá khớp (overfitting) khi huấn luyện trên dữ liệu giới hạn.
+\end{enumerate}
+
+Tóm lại, việc tích hợp LoRaLin là yếu tố then chốt giúp EdgeFace duy trì được hiệu năng cao của một mạng nơ-ron sâu trong khi vẫn đảm bảo tính khả thi khi triển khai trên các thiết bị biên có năng lực tính toán hạn chế, đáp ứng hoàn hảo yêu cầu của bài toán truy xuất thời gian thực trong OPQN.
+
+\subsubsection*{Kết luận về khả năng ứng dụng}
+Các thực nghiệm từ nghiên cứu gốc \cite{george2024edgeface} đã khẳng định hiệu quả của kiến trúc EdgeFace: mô hình đạt độ chính xác 99.73\% trên tập LFW và 94.85\% trên IJB-C (TAR@FAR=1e-4) chỉ với 1.77 triệu tham số. Những chỉ số này vượt trội so với các kiến trúc nhẹ khác như MobileFaceNets hay ShuffleFaceNet. Đây là cơ sở thực tiễn vững chắc để chúng tôi lựa chọn EdgeFace làm mạng xương sống tích hợp vào hệ thống OPQN, chi tiết về quy trình huấn luyện và tinh chỉnh mô hình cho bài toán truy xuất cụ thể sẽ được trình bày chi tiết trong Chương 3 (Phương pháp đề xuất).
+
+%done
 
 
 

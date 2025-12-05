@@ -32,7 +32,7 @@ So với OPQN gốc, đóng góp chính là:
 
 
 \subsection{Tiền xử lý dữ liệu: Chi tiết quy trình và tham chiếu OPQN}
-Để đảm bảo tính nhất quán và khả năng tái lập, quy trình tiền xử lý dữ liệu được thiết kế dựa trên các kỹ thuật tiêu chuẩn trong lĩnh vực nhận diện khuôn mặt, đồng thời tham chiếu trực tiếp đến phương pháp xử lý trong bài báo OPQN \cite{chen2021opqn}. OPQN sử dụng các bước tiền xử lý đơn giản nhưng hiệu quả để tập trung vào đặc trưng bottleneck, bao gồm phát hiện khuôn mặt, căn chỉnh, resize, và phân chia train/test theo protocol chuẩn \(5 ảnh test per identity cho FaceScrub; 50 ảnh test per identity cho VGGFace2\). Chúng tôi tuân thủ nguyên tắc này, nhưng mở rộng cho hai kích thước ảnh \(32x32 và 112x112\) để so sánh backbone ResNet20 \(tối ưu 32x32\) và EdgeFace \(tối ưu 112x112\). Quy trình được triển khai bằng OpenCV và dlib \(tương đương MTCNN về độ chính xác\), với margin padding để tránh mất thông tin biên.
+Để đảm bảo tính nhất quán và khả năng tái lập, quy trình tiền xử lý dữ liệu được thiết kế dựa trên các kỹ thuật tiêu chuẩn trong lĩnh vực nhận diện khuôn mặt, đồng thời tham chiếu trực tiếp đến phương pháp xử lý trong bài báo OPQN \cite{opqn}. OPQN sử dụng các bước tiền xử lý đơn giản nhưng hiệu quả để tập trung vào đặc trưng bottleneck, bao gồm phát hiện khuôn mặt, căn chỉnh, resize, và phân chia train/test theo protocol chuẩn \(5 ảnh test per identity cho FaceScrub; 50 ảnh test per identity cho VGGFace2\). Chúng tôi tuân thủ nguyên tắc này, nhưng mở rộng cho hai kích thước ảnh \(32x32 và 112x112\) để so sánh backbone ResNet20 \(tối ưu 32x32\) và EdgeFace \(tối ưu 112x112\). Quy trình được triển khai bằng OpenCV và dlib \(tương đương MTCNN về độ chính xác\), với margin padding để tránh mất thông tin biên.
 
 Quy trình chung được xây dựng theo hướng dẫn của OPQN:
 \begin{enumerate}
@@ -59,7 +59,7 @@ FaceScrub \cite{facescrub} chứa 106,863 ảnh của 530 danh tính (actor/actr
 
 \subsubsection{Tiền xử lý cho phiên bản 32$\times$32 (theo OPQN)}
 \begin{itemize}
-    \item Theo OPQN \cite{chen2021opqn}: ``All face images are cropped and resized to $32\times 32$.'' 
+    \item Theo OPQN \cite{opqn}: ``All face images are cropped and resized to $32\times 32$.'' 
     Chúng tôi thực hiện crop sau khi phát hiện khuôn mặt bằng dlib, thêm margin $0.35$ để bù đắp cho kích thước nhỏ, và resize hai bước $64\times 64 \rightarrow 32\times 32$ nhằm tránh mất chi tiết -- một cải tiến nhẹ so với resize trực tiếp trong paper nhưng vẫn giữ nguyên kích thước cuối.
     \item Augmentation: random cropping và horizontal flipping giống OPQN.
     \item Phân chia: ngẫu nhiên chọn 5 ảnh test per identity (seed=42), còn lại cho train, thu được \(\sim 38{,}722\) ảnh train và \(2{,}550\) ảnh test.
