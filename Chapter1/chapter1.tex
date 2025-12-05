@@ -139,8 +139,36 @@ Việc chọn EdgeFace thay vì Resnet20 giúp hệ thống tăng độ chính x
 Tổng thế, hướng tiếp cận này vừa đảm bảo hiệu quả tính toán, vừa giữ khả năng mở rộng và ứng dụng thực tiễn trong các hệ thống giám sát, xác thực hoặc truy xuất khuôn mặt tại Việt Nam - nơi tài nguyên thiết bị thường bị giới hạn.
 
 \section{Đóng góp}
+Khóa luận đề xuất một mô hình truy xuất ảnh mặt người tinh gọn dựa trên sự kết hợp giữa kiến trúc EdgeFace và phương pháp lượng tử hóa tích trực chuẩn (OPQN), mang lại các đóng góp chính sau đây:
+
+\begin{itemize}
+    \item \textbf{Cải tiến kiến trúc mạng xương sống:} Thay thế ResNet20 trong OPQN gốc bằng EdgeFace – một mô hình lai CNN-Transformer tinh gọn dành cho thiết bị biên. Với chỉ khoảng 1.8 triệu tham số (giảm 92\% so với ResNet20), EdgeFace giúp giảm đáng kể chi phí tính toán (FLOPs giảm 20-30\%) và bộ nhớ, đồng thời duy trì hoặc cải thiện độ chính xác truy xuất (mAP) trên tập dữ liệu FaceScrub.
+    
+    \item \textbf{Tích hợp huấn luyện đầu cuối với các hàm mất mát biên góc:} Khóa luận áp dụng CosFace và ArcFace để khởi tạo trọng số EdgeFace, kết hợp với lượng tử hóa trực chuẩn (OrthoPQ) để tăng khả năng phân biệt đặc trưng. Các thực nghiệm cho thấy biến thể với CosFace đạt mAP lên đến 96.18\% trên FaceScrub (112x112) ở độ dài mã 48 bit, vượt trội so với OPQN gốc.
+    
+    \item \textbf{Đánh giá toàn diện trên tập dữ liệu có khả năng mở rộng:} Đánh giá hiệu suất trên FaceScrub (seen identities) và đề xuất mở rộng sang VGGFace2 (unseen identities), tập trung vào tốc độ truy vấn (ms/query) – một chỉ số chưa được đề cập trong OPQN gốc. Kết quả chứng minh mô hình phù hợp cho các ứng dụng thời gian thực trên thiết bị di động.
+    
+    \item \textbf{Phân tích giới hạn và hướng mở rộng:} Xác định rõ các giới hạn như chưa triển khai trên thiết bị biên thực tế và đề xuất các hướng nghiên cứu tương lai, chẳng hạn như tích hợp re-ranking hoặc chống tấn công đối kháng để tăng tính mạnh mẽ.
+\end{itemize}
+
+Các đóng góp này không chỉ nâng cao hiệu quả của OPQN mà còn mở rộng ứng dụng thực tiễn tại Việt Nam, nơi tài nguyên thiết bị thường hạn chế, chẳng hạn trong hệ thống xác thực VNeID hoặc giám sát an ninh.
+
 \section{Tổ chức khóa luận}
+Khóa luận được tổ chức thành 5 chương chính, với cấu trúc logic từ tổng quan đến thực nghiệm và kết luận:
+
+\begin{itemize}
+    \item \textbf{Chương 1: Tổng quan} – Giới thiệu động lực nghiên cứu, phát biểu bài toán, thách thức, giới hạn, hướng tiếp cận và đóng góp.
+    \item \textbf{Chương 2: Cơ sở lý thuyết} – Tổng quan về các khái niệm cốt lõi như truy xuất ảnh mặt người, lượng tử hóa đặc trưng, và các mô hình tinh gọn liên quan.
+    \item \textbf{Chương 3: Phương pháp} – Mô tả chi tiết mô hình đề xuất, bao gồm OPQN với backbone EdgeFace và quy trình huấn luyện.
+    \item \textbf{Chương 4: Thực nghiệm} – Trình bày thiết lập, kết quả và phân tích trên các tập dữ liệu FaceScrub và VGGFace2.
+    \item \textbf{Chương 5: Kết luận và hướng phát triển} – Tóm tắt kết quả, thảo luận hạn chế và đề xuất hướng nghiên cứu tương lai.
+\end{itemize}
+
+Phụ lục bao gồm mã nguồn, dữ liệu bổ sung và các bảng biểu chi tiết.
+
 \section{Tổng kết}
+Chương này đã cung cấp cái nhìn tổng quan về bài toán truy xuất ảnh mặt người trên tập dữ liệu lớn, nhấn mạnh nhu cầu về mô hình tinh gọn để đáp ứng các ứng dụng thực tiễn. Chúng tôi đã phát biểu rõ bài toán, phân tích thách thức và giới hạn, đồng thời giới thiệu hướng tiếp cận dựa trên EdgeFace kết hợp OPQN. Các đóng góp của khóa luận tập trung vào việc cải thiện hiệu quả tính toán mà vẫn duy trì độ chính xác cao, mở đường cho các chương tiếp theo khám phá sâu hơn về lý thuyết và phương pháp.
+
 
 \newpage
 
